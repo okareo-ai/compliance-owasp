@@ -1,0 +1,43 @@
+---
+description: Project Development Guidelines
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# compliance-owasp Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2026-03-09
+
+## Active Technologies
+- Repository files only — `.jsonl` scenarios, `.md` model-based checks, `.py` code-based check, `.env` config. No database. (002-llm02-sensitive-disclosure)
+
+- Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter` (001-llm01-prompt-injection)
+- Repository files only — `.jsonl` scenarios, `.md` checks/drivers, `.env` config. No database. (001-llm01-prompt-injection)
+
+- Python 3.11+ + `okareo` (Okareo Python SDK), `jupyter`, `python-dotenv` (001-llm01-prompt-injection)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+
+## Code Style
+
+Python 3.11+: Follow standard conventions
+
+## Recent Changes
+- 002-llm02-sensitive-disclosure: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
+- 001-llm01-prompt-injection: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
+
+- 001-llm01-prompt-injection: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
+
+
+<!-- MANUAL ADDITIONS START -->
+
+<!-- MANUAL ADDITIONS END -->
