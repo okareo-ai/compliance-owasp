@@ -11,6 +11,7 @@ Auto-generated from all feature plans. Last updated: 2026-03-09
 ## Active Technologies
 - Repository files only — `.jsonl` scenarios, `.md` model-based checks, `.py` code-based check, `.env` config. No database. (002-llm02-sensitive-disclosure)
 - Repository files only — `.jsonl` scenarios, `.md` model-based checks, `.env` config. No database. (003-llm04-data-poisoning)
+- Repository files only — `.jsonl` scenarios, `.md` checks/drivers, `.env` config. No database. (004-llm06-excessive-agency)
 
 - Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter` (001-llm01-prompt-injection)
 - Repository files only — `.jsonl` scenarios, `.md` checks/drivers, `.env` config. No database. (001-llm01-prompt-injection)
@@ -33,9 +34,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+: Follow standard conventions
 
 ## Recent Changes
+- 004-llm06-excessive-agency: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
 - 003-llm04-data-poisoning: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
 - 002-llm02-sensitive-disclosure: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
-- 001-llm01-prompt-injection: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
 
 
 
