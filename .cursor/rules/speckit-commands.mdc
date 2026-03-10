@@ -1,0 +1,35 @@
+---
+description: Spec-Kit slash command routing — maps /speckit.* commands to their definitions
+alwaysApply: true
+---
+
+# Spec-Kit Integration
+
+Use the principles in `.specify/memory/constitution.md` for all development decisions.
+When generating specs, plans, or tasks, refer to the templates in `.specify/templates/`.
+
+## Available Slash Commands
+
+When the user types any of the commands below, follow the instructions in the corresponding file exactly. Treat `$ARGUMENTS` as everything the user typed after the command name.
+
+| Command | Purpose |
+|---------|---------|
+| `/speckit.constitution` | Define or update project guardrails and principles |
+| `/speckit.specify` | Create a feature specification from a description |
+| `/speckit.clarify` | Ask targeted clarification questions about the spec |
+| `/speckit.plan` | Create a technical implementation plan |
+| `/speckit.tasks` | Break the plan into dependency-ordered tasks |
+| `/speckit.checklist` | Generate a requirements quality checklist |
+| `/speckit.analyze` | Cross-artifact consistency and quality analysis |
+| `/speckit.implement` | Execute implementation from the task list |
+| `/speckit.taskstoissues` | Convert tasks into GitHub issues |
+
+## Handoffs
+
+Some commands offer handoff buttons (defined in their frontmatter under `handoffs`). When a command completes, present any handoffs as suggested next steps the user can take.
+
+## Key References
+
+- **Constitution**: `.specify/memory/constitution.md` (non-negotiable project principles)
+- **Templates**: `.specify/templates/` (spec, plan, tasks, checklist, constitution templates)
+- **Scripts**: `.specify/scripts/bash/` (setup, prerequisites, context update)
