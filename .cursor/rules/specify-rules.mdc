@@ -6,7 +6,7 @@ alwaysApply: true
 
 # compliance-owasp Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-09
+Auto-generated from all feature plans. Last updated: 2026-03-11
 
 ## Active Technologies
 - Repository files only — `.jsonl` scenarios, `.md` model-based checks, `.py` code-based check, `.env` config. No database. (002-llm02-sensitive-disclosure)
@@ -17,6 +17,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-09
 - Repository files only — `.jsonl` scenarios, `.md` checks/drivers, `.env` config. No database. (001-llm01-prompt-injection)
 
 - Python 3.11+ + `okareo` (Okareo Python SDK), `jupyter`, `python-dotenv` (001-llm01-prompt-injection)
+- Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter` (007-llm03-supply-chain)
+- Repository files only — `.jsonl` scenarios, `.md` model-based checks, `.py` code-based checks, `.env` config. No database. (007-llm03-supply-chain)
 
 ## Project Structure
 
@@ -34,9 +36,10 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+: Follow standard conventions
 
 ## Recent Changes
+- 007-llm03-supply-chain: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
+- 007-llm03-supply-chain: Added Repository files only — `.jsonl` scenarios, `.md` model-based checks, `.py` code-based checks, `.env` config. No database.
+- 006-llm07-system-prompt-leakage: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
 - 004-llm06-excessive-agency: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
-- 003-llm04-data-poisoning: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
-- 002-llm02-sensitive-disclosure: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
 
 
 
