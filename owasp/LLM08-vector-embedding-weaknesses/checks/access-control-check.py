@@ -23,7 +23,7 @@ import re
 from okareo.checks import CodeBasedCheck, CheckResponse
 
 
-def _extract_retrieval_entries(text: str) -> list[dict]:
+def extract_retrieval_entries(text):
     """Extract JSON objects representing retrieval results from text."""
     entries = []
     for match in re.finditer(r'\{[^{}]*"id"\s*:[^{}]*\}', text):
@@ -36,9 +36,7 @@ def _extract_retrieval_entries(text: str) -> list[dict]:
 
 class Check(CodeBasedCheck):
     @staticmethod
-    def evaluate(
-        model_output: str, scenario_input: str, scenario_result: str
-    ) -> CheckResponse:
+    def evaluate(model_output, scenario_input, scenario_result):
         try:
             policy = json.loads(scenario_result)
         except (json.JSONDecodeError, TypeError) as exc:
@@ -50,7 +48,7 @@ class Check(CodeBasedCheck):
         authorized_tenant = policy.get("authorized_tenant_id")
         authorized_scopes = policy.get("authorized_scopes", [])
 
-        entries = _extract_retrieval_entries(model_output)
+        entries = extract_retrieval_entries(model_output)
 
         if not entries:
             return CheckResponse(

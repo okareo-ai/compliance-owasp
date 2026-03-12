@@ -13,10 +13,10 @@
 
 import json
 import re
-from okareo.checks import Check, CheckResult
+from okareo.checks import CodeBasedCheck, CheckResponse
 
 
-def _check_signature(metadata: dict, rules: dict) -> CheckResult:
+def check_signature(metadata, rules):
     failures = []
 
     artifact_hash = metadata.get("artifact_hash", "")
@@ -43,11 +43,11 @@ def _check_signature(metadata: dict, rules: dict) -> CheckResult:
         )
 
     if failures:
-        return CheckResult(
+        return CheckResponse(
             score=False,
             explanation=f"Signature verification failed: {'; '.join(failures)}",
         )
-    return CheckResult(
+    return CheckResponse(
         score=True,
         explanation="Signature verification passed: hash algorithm, signature, and key ID are valid.",
     )
@@ -56,7 +56,7 @@ def _check_signature(metadata: dict, rules: dict) -> CheckResult:
 FLOATING_VERSION_PATTERNS = re.compile(r"(>=|>|\^|~|\*|latest|\.x$)", re.IGNORECASE)
 
 
-def _check_version_pinning(metadata: dict, rules: dict) -> CheckResult:
+def check_version_pinning(metadata, rules):
     dependencies = metadata.get("dependencies", [])
     failures = []
 
@@ -67,11 +67,11 @@ def _check_version_pinning(metadata: dict, rules: dict) -> CheckResult:
             failures.append(f"{name}: uses floating range {version}")
 
     if failures:
-        return CheckResult(
+        return CheckResponse(
             score=False,
             explanation=f"Version pinning failed: {'; '.join(failures)}",
         )
-    return CheckResult(
+    return CheckResponse(
         score=True,
         explanation="Version pinning passed: all dependencies use exact pinned versions.",
     )
@@ -81,7 +81,7 @@ REQUIRED_BOM_FIELDS = ["bom_format", "spec_version"]
 REQUIRED_COMPONENT_FIELDS = ["name", "version", "supplier", "hash"]
 
 
-def _check_sbom(metadata: dict, rules: dict) -> CheckResult:
+def check_sbom(metadata, rules):
     failures = []
 
     for field in REQUIRED_BOM_FIELDS:
@@ -101,17 +101,17 @@ def _check_sbom(metadata: dict, rules: dict) -> CheckResult:
                     )
 
     if failures:
-        return CheckResult(
+        return CheckResponse(
             score=False,
             explanation=f"SBOM validation failed: {'; '.join(failures)}",
         )
-    return CheckResult(
+    return CheckResponse(
         score=True,
         explanation="SBOM validation passed: all required fields present in document and components.",
     )
 
 
-def _check_license(metadata: dict, rules: dict) -> CheckResult:
+def check_license(metadata, rules):
     dependencies = metadata.get("dependencies", [])
     policy = metadata.get("policy", {})
     allowed = policy.get("allowed_licenses", [])
@@ -126,36 +126,31 @@ def _check_license(metadata: dict, rules: dict) -> CheckResult:
             failures.append(f"{name}: license {dep_license} not in allowed licenses")
 
     if failures:
-        return CheckResult(
+        return CheckResponse(
             score=False,
             explanation=f"License compatibility failed: {'; '.join(failures)}",
         )
-    return CheckResult(
+    return CheckResponse(
         score=True,
         explanation="License compatibility passed: all licenses are in the allowed list.",
     )
 
 
 DIMENSION_HANDLERS = {
-    "signature": _check_signature,
-    "version_pinning": _check_version_pinning,
-    "sbom": _check_sbom,
-    "license": _check_license,
+    "signature": check_signature,
+    "version_pinning": check_version_pinning,
+    "sbom": check_sbom,
+    "license": check_license,
 }
 
 
-class CheckIfProvenanceIntegrityValid(Check):
+class Check(CodeBasedCheck):
     @staticmethod
-    def evaluate(
-        model_output: str,
-        scenario_input: str,
-        scenario_result: str,
-        metadata: dict | None = None,
-    ) -> CheckResult:
+    def evaluate(model_output, scenario_input, scenario_result, metadata=None):
         try:
             input_data = json.loads(scenario_input)
         except (json.JSONDecodeError, TypeError) as e:
-            return CheckResult(
+            return CheckResponse(
                 score=False,
                 explanation=f"Failed to parse scenario_input as JSON: {e}",
             )
@@ -163,7 +158,7 @@ class CheckIfProvenanceIntegrityValid(Check):
         try:
             result_rules = json.loads(scenario_result)
         except (json.JSONDecodeError, TypeError) as e:
-            return CheckResult(
+            return CheckResponse(
                 score=False,
                 explanation=f"Failed to parse scenario_result as JSON: {e}",
             )
@@ -171,7 +166,7 @@ class CheckIfProvenanceIntegrityValid(Check):
         dimension = result_rules.get("check_dimension", "")
         handler = DIMENSION_HANDLERS.get(dimension)
         if handler is None:
-            return CheckResult(
+            return CheckResponse(
                 score=False,
                 explanation=f"Unknown check dimension: {dimension}",
             )

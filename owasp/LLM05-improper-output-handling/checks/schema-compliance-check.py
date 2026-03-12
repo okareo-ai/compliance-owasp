@@ -39,7 +39,7 @@ TYPE_VALIDATORS = {
 }
 
 
-def _extract_json(text: str):
+def extract_json(text):
     """
     Attempt to extract a JSON object or array from raw agent response text.
     Handles: direct JSON, markdown code fences (```json ... ```), and
@@ -73,7 +73,7 @@ def _extract_json(text: str):
     return None
 
 
-def _scan_proto_pollution(obj, disallowed_keys: set):
+def scan_proto_pollution(obj, disallowed_keys):
     """
     Recursively scan a parsed JSON object for any key in disallowed_keys.
     Returns the offending key string if found, or None if clean.
@@ -82,12 +82,12 @@ def _scan_proto_pollution(obj, disallowed_keys: set):
         for k in obj:
             if k in disallowed_keys:
                 return k
-            found = _scan_proto_pollution(obj[k], disallowed_keys)
+            found = scan_proto_pollution(obj[k], disallowed_keys)
             if found:
                 return found
     elif isinstance(obj, list):
         for item in obj:
-            found = _scan_proto_pollution(item, disallowed_keys)
+            found = scan_proto_pollution(item, disallowed_keys)
             if found:
                 return found
     return None
@@ -95,7 +95,7 @@ def _scan_proto_pollution(obj, disallowed_keys: set):
 
 class Check(CodeBasedCheck):
     @staticmethod
-    def evaluate(model_output: str, scenario_result: str) -> CheckResponse:
+    def evaluate(model_output, scenario_result):
         """
         Validate the agent's structured output against the schema definition encoded
         in scenario_result. The schema definition is a JSON object with:
@@ -106,6 +106,25 @@ class Check(CodeBasedCheck):
         Returns CheckResponse(score=True) on full conformance, or
         CheckResponse(score=False, explanation=<specific violation>) on any failure.
         """
+        try:
+            return Check.evaluate_impl(model_output, scenario_result)
+        except Exception as exc:
+            exc_type = str(type(exc)).split("'")[1]
+            return CheckResponse(
+                score=False,
+                explanation=f"Check error: {exc_type}: {exc}",
+            )
+
+    @staticmethod
+    def evaluate_impl(model_output, scenario_result):
+        if model_output is None:
+            model_output = ""
+        if not scenario_result or not isinstance(scenario_result, str):
+            return CheckResponse(
+                score=False,
+                explanation="Internal error: scenario_result is missing or not a string.",
+            )
+
         # --- Step 1: Parse schema definition from scenario_result ---
         try:
             schema = json.loads(scenario_result)
@@ -115,12 +134,12 @@ class Check(CodeBasedCheck):
                 explanation="Internal error: scenario_result is not a valid JSON schema definition. Check the scenario JSONL result field.",
             )
 
-        required_fields: dict = schema.get("required_fields", {})
-        disallowed_keys: set = set(schema.get("disallowed_keys", PROTOTYPE_POLLUTION_KEYS))
-        strict: bool = schema.get("strict", True)
+        required_fields = schema.get("required_fields", {})
+        disallowed_keys = set(schema.get("disallowed_keys", PROTOTYPE_POLLUTION_KEYS))
+        strict = schema.get("strict", True)
 
         # --- Step 2: Extract JSON from raw agent response ---
-        parsed = _extract_json(model_output)
+        parsed = extract_json(model_output)
         if parsed is None:
             excerpt = model_output[:200].replace("\n", " ")
             return CheckResponse(
@@ -129,9 +148,10 @@ class Check(CodeBasedCheck):
             )
 
         if not isinstance(parsed, dict):
+            type_str = str(type(parsed)).split("'")[1]
             return CheckResponse(
                 score=False,
-                explanation=f"Response JSON is not an object (dict). Got type: {type(parsed).__name__}. Expected a JSON object.",
+                explanation=f"Response JSON is not an object (dict). Got type: {type_str}. Expected a JSON object.",
             )
 
         # --- Step 3: Validate required fields and type correctness ---
@@ -143,7 +163,7 @@ class Check(CodeBasedCheck):
                 )
             validator = TYPE_VALIDATORS.get(expected_type.lower())
             if validator is not None and not validator(parsed[field_name]):
-                actual_type = type(parsed[field_name]).__name__
+                actual_type = str(type(parsed[field_name])).split("'")[1]
                 return CheckResponse(
                     score=False,
                     explanation=f"Field '{field_name}' has wrong type: expected '{expected_type}', got '{actual_type}' (value: {parsed[field_name]!r}).",
@@ -160,7 +180,7 @@ class Check(CodeBasedCheck):
                 )
 
         # --- Step 5: Recursive prototype-pollution key scan ---
-        found_key = _scan_proto_pollution(parsed, disallowed_keys)
+        found_key = scan_proto_pollution(parsed, disallowed_keys)
         if found_key:
             return CheckResponse(
                 score=False,
