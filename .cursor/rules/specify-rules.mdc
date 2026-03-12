@@ -36,9 +36,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+: Follow standard conventions
 
 ## Recent Changes
+- 010-llm10-unbounded-consumption: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
+- 009-llm09-misinformation: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
 - 008-llm08-vector-embedding: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
-- 007-llm03-supply-chain: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
-- 007-llm03-supply-chain: Added Repository files only — `.jsonl` scenarios, `.md` model-based checks, `.py` code-based checks, `.env` config. No database.
 
 
 
