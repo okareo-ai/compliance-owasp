@@ -2,7 +2,7 @@
 .env
 .env.local
 owasp/target.env
-
+agent-use-cases/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
