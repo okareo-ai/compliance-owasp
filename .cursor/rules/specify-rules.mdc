@@ -12,6 +12,7 @@ Auto-generated from all feature plans. Last updated: 2026-03-11
 - Repository files only — `.jsonl` scenarios, `.md` model-based checks, `.py` code-based check, `.env` config. No database. (002-llm02-sensitive-disclosure)
 - Repository files only — `.jsonl` scenarios, `.md` model-based checks, `.env` config. No database. (003-llm04-data-poisoning)
 - Repository files only — `.jsonl` scenarios, `.md` checks/drivers, `.env` config. No database. (004-llm06-excessive-agency)
+- Repository files only — `owasp/target.env`, `owasp/target.env.example`. No database. (011-target-auth-flow)
 
 - Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter` (001-llm01-prompt-injection)
 - Repository files only — `.jsonl` scenarios, `.md` checks/drivers, `.env` config. No database. (001-llm01-prompt-injection)
@@ -36,9 +37,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.11+: Follow standard conventions
 
 ## Recent Changes
+- 011-target-auth-flow: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
 - 010-llm10-unbounded-consumption: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
 - 009-llm09-misinformation: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
-- 008-llm08-vector-embedding: Added Python 3.11+ + `okareo` (Okareo Python SDK), `python-dotenv`, `jupyter`
 
 
 

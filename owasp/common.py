@@ -3,7 +3,7 @@ Shared utilities for OWASP LLM compliance notebooks.
 
 All notebooks import from this module for:
 - Target definition (loads from owasp/target.env; supports env path override for rotation)
-- Check/driver parsing (parse_check_md, parse_driver_md, parse_check_py_meta, etc.)
+- Check/driver parsing (parse_artifact)
 - Code-based check registration (CodeCheckFromSource)
 - Pass-through driver template (SINGLE_TURN_DRIVER_TEMPLATE)
 
@@ -16,11 +16,7 @@ Usage in notebooks:
     from owasp.common import (
         build_target,
         init_okareo,
-        parse_check_md,
-        parse_driver_md,
-        parse_check_py_meta,
-        parse_check_py_metadata,
-        parse_check_py,
+        parse_artifact,
         CodeCheckFromSource,
         SINGLE_TURN_DRIVER_TEMPLATE,
     )
@@ -118,10 +114,17 @@ def build_target(
     endpoint_url = config.get("TARGET_ENDPOINT_URL")
     method = config.get("TARGET_METHOD", "POST")
     max_parallel = int(config.get("TARGET_MAX_PARALLEL_REQUESTS", 1))
+
+    session_auth_url = config.get("TARGET_AUTH_URL", "")
+    session_auth_body = config.get("TARGET_AUTH_BODY", "")
+    session_auth_response_token_path = config.get("TARGET_AUTH_RESPONSE_TOKEN_PATH", "response.access_token")
+
+
     api_key = config.get("TARGET_API_KEY", "")
     request_body = config.get("TARGET_REQUEST_BODY", '{"message": "{latest_message}"}')
     response_path = config.get("TARGET_RESPONSE_PATH", "response")
     session_start_url = config.get("TARGET_SESSION_START_URL", "")
+    session_start_body = config.get("TARGET_SESSION_START_BODY", "")
     session_id_path = config.get("TARGET_SESSION_ID_PATH", "")
     session_end_url = config.get("TARGET_SESSION_END_URL", "")
     session_end_body = config.get("TARGET_SESSION_END_BODY", "")
@@ -135,28 +138,48 @@ def build_target(
         headers["Authorization"] = f"Bearer {api_key}"
     headers_json = json.dumps(headers)
 
-    body = (
-        json.loads(request_body)
-        if isinstance(request_body, str)
-        else request_body
-    )
 
-    next_turn = TurnConfig(
-        url=endpoint_url,
-        method=method,
-        headers=headers_json,
-        body=body,
-        response_message_path=response_path,
-    )
+    auth_session = None
+    if session_auth_url:
+        auth_body = (
+            json.loads(session_auth_body)
+            if isinstance(session_auth_body, str) and session_auth_body
+            else {}
+        )
+        auth_session = SessionConfig(
+            url=session_auth_url,
+            method="POST",
+            headers=headers_json,
+            body=auth_body,
+        )
 
     start_session = None
     if session_start_url:
+        start_body = (
+            json.loads(session_start_body)
+            if isinstance(session_start_body, str) and session_start_body
+            else {}
+        )
         start_session = SessionConfig(
             url=session_start_url,
             method="POST",
             headers=headers_json,
-            response_session_id_path=session_id_path or "session_id",
+            response_session_id_path=session_id_path or "response.session_id",
+            body=start_body,
         )
+
+    next_body = (
+        json.loads(request_body)
+        if isinstance(request_body, str)
+        else request_body
+    )
+    next_turn = TurnConfig(
+        url=endpoint_url,
+        method=method,
+        headers=headers_json,
+        body=next_body,
+        response_message_path=response_path,
+    )
 
     end_session = None
     if session_end_url:
@@ -175,6 +198,7 @@ def build_target(
     endpoint = CustomEndpointTarget(
         max_parallel_requests=max_parallel,
         next_turn=next_turn,
+        # **({"auth_session": auth_session} if auth_session else {}),
         **({"start_session": start_session} if start_session else {}),
         **({"end_session": end_session} if end_session else {}),
     )
@@ -210,12 +234,10 @@ def init_okareo() -> tuple[Okareo, str]:
 # -----------------------------------------------------------------------------
 
 
-def parse_check_md(file_path: Path) -> dict:
-    """Parse a model-based check .md file into metadata and prompt template."""
-    content = file_path.read_text(encoding="utf-8")
-    front_matter = {}
+def _parse_md_frontmatter(content: str) -> tuple[dict, str]:
+    """Extract YAML frontmatter and body from markdown content."""
+    front_matter: dict[str, str] = {}
     body = content
-
     if content.startswith("---"):
         parts = content.split("---", 2)
         if len(parts) >= 3:
@@ -224,112 +246,90 @@ def parse_check_md(file_path: Path) -> dict:
                     key, val = line.split(":", 1)
                     front_matter[key.strip()] = val.strip().strip('"')
             body = parts[2].strip()
-
-    idx = body.find("## Prompt Template")
-    prompt_section = (
-        body[idx + len("## Prompt Template") :].strip() if idx != -1 else ""
-    )
-
-    return {
-        "name": front_matter.get("name", file_path.stem),
-        "description": front_matter.get("description", ""),
-        "prompt_template": prompt_section.strip(),
-    }
+    return front_matter, body
 
 
-def parse_driver_md(file_path: Path, default_temperature: float = 0.6) -> dict:
-    """Parse a driver .md file into metadata and prompt template."""
-    content = file_path.read_text(encoding="utf-8")
-    front_matter = {}
-    body = content
-
-    if content.startswith("---"):
-        parts = content.split("---", 2)
-        if len(parts) >= 3:
-            for line in parts[1].strip().splitlines():
-                if ":" in line:
-                    key, val = line.split(":", 1)
-                    front_matter[key.strip()] = val.strip().strip('"')
-            body = parts[2].strip()
-
-    idx = body.find("## Persona Prompt Template")
-    prompt_section = (
-        body[idx + len("## Persona Prompt Template") :].strip()
-        if idx != -1
-        else ""
-    )
-
-    return {
-        "name": front_matter.get("name", file_path.stem),
-        "prompt_template": prompt_section.strip(),
-        "temperature": float(front_matter.get("temperature", default_temperature)),
-    }
-
-
-def parse_check_py_meta(file_path: Path) -> dict:
-    """Parse the # --- metadata block from a code-based check .py file (LLM02 style)."""
-    content = file_path.read_text(encoding="utf-8")
-    meta = {}
-    in_meta = False
-    for line in content.splitlines():
-        if line.strip() == "# ---":
-            if in_meta:
-                break
-            in_meta = True
-            continue
-        if in_meta and line.startswith("# "):
-            kv = line[2:].strip()
-            if ":" in kv:
-                key, val = kv.split(":", 1)
-                meta[key.strip()] = val.strip().strip('"')
-    return {
-        "name": meta.get("name", file_path.stem),
-        "description": meta.get("description", ""),
-    }
-
-
-def parse_check_py_metadata(file_path: Path) -> dict:
-    """Parse metadata from Python comment header (LLM05 style). Returns name, description, source."""
-    content = file_path.read_text(encoding="utf-8")
-    front_matter = {}
-    in_header = False
-    for line in content.splitlines():
-        stripped = line.strip()
-        if stripped == "# ---":
-            if not in_header:
-                in_header = True
-                continue
-            break
-        if in_header and stripped.startswith("# "):
-            meta_line = stripped[2:]
-            if ":" in meta_line:
-                key, val = meta_line.split(":", 1)
-                front_matter[key.strip()] = val.strip().strip('"')
-    return {
-        "name": front_matter.get("name", file_path.stem),
-        "description": front_matter.get("description", ""),
-        "source": content,
-    }
-
-
-def parse_check_py(file_path: Path) -> dict:
-    """Parse code-based check .py metadata (LLM08 style). Returns name, description, code_contents."""
-    content = file_path.read_text(encoding="utf-8")
-    metadata = {}
+def _parse_py_metadata_block(content: str) -> dict[str, str]:
+    """Extract metadata dict from # --- block in Python file content."""
     header_match = re.search(
         r"^# ---\s*\n(.*?)\n# ---", content, re.DOTALL | re.MULTILINE
     )
+    metadata: dict[str, str] = {}
     if header_match:
         for line in header_match.group(1).strip().splitlines():
             line = line.lstrip("# ").strip()
             if ":" in line:
                 key, val = line.split(":", 1)
                 metadata[key.strip()] = val.strip().strip('"')
-    return {
-        "name": metadata.get("name", file_path.stem),
-        "description": metadata.get("description", ""),
-        "code_contents": content,
-    }
+    return metadata
+
+
+def _extract_section(body: str, header: str) -> str:
+    """Extract content after a markdown section header."""
+    idx = body.find(header)
+    return body[idx + len(header) :].strip() if idx != -1 else ""
+
+
+# Sentinel for inapplicable fields in parse_artifact
+UNSET = object()
+
+
+def parse_artifact(
+    file_path: Path,
+    *,
+    default_temperature: Optional[float] = None,
+) -> dict:
+    """
+    Unified parser for check .md, driver .md, and check .py files.
+
+    Returns a dict with all possible keys; inapplicable fields are UNSET.
+    - name, description: always present (description "" for drivers)
+    - prompt_template: from .md files
+    - temperature: from driver .md (uses default_temperature if provided)
+    - code_contents, source: from .py files (same value; UNSET for .md)
+
+    Args:
+        file_path: Path to .md or .py artifact file.
+        default_temperature: Optional default for driver .md temperature (default 0.6).
+    """
+    content = file_path.read_text(encoding="utf-8")
+    suffix = file_path.suffix.lower()
+    default_temp = 0.6 if default_temperature is None else default_temperature
+
+    if suffix == ".py":
+        meta = _parse_py_metadata_block(content)
+        return {
+            "name": meta.get("name", file_path.stem),
+            "description": meta.get("description", ""),
+            "prompt_template": UNSET,
+            "temperature": UNSET,
+            "code_contents": content,
+            "source": content,
+        }
+    elif suffix == ".md":
+        front_matter, body = _parse_md_frontmatter(content)
+        if "## Persona Prompt Template" in body:
+            prompt_section = _extract_section(body, "## Persona Prompt Template")
+            return {
+                "name": front_matter.get("name", file_path.stem),
+                "description": "",
+                "prompt_template": prompt_section.strip(),
+                "temperature": float(front_matter.get("temperature", default_temp)),
+                "code_contents": UNSET,
+                "source": UNSET,
+            }
+        else:
+            prompt_section = _extract_section(body, "## Prompt Template")
+            return {
+                "name": front_matter.get("name", file_path.stem),
+                "description": front_matter.get("description", ""),
+                "prompt_template": prompt_section.strip(),
+                "temperature": UNSET,
+                "code_contents": UNSET,
+                "source": UNSET,
+            }
+    else:
+        raise ValueError(f"Unsupported artifact type: {suffix}")
 
 
 # -----------------------------------------------------------------------------

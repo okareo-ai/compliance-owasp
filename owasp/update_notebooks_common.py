@@ -24,11 +24,7 @@ from okareo.model_under_test import Driver
 
 from owasp.common import (
     init_okareo,
-    parse_check_md,
-    parse_driver_md,
-    parse_check_py_meta,
-    parse_check_py_metadata,
-    parse_check_py,
+    parse_artifact,
     CodeCheckFromSource,
     build_target,
     SINGLE_TURN_DRIVER_TEMPLATE,
@@ -37,23 +33,6 @@ from owasp.common import (
 okareo, OKAREO_API_KEY = init_okareo()
 print(f"✓ Okareo SDK initialized (key: ...{OKAREO_API_KEY[-5:]})")
 print(f"Category directory: {CATEGORY_DIR}")'''
-
-# Patterns to remove (common code now in owasp.common)
-REMOVE_PATTERNS = [
-    # parse_check_md
-    r'def parse_check_md\(file_path: Path\) -> dict:.*?return \{\s*"name": front_matter\.get\("name", file_path\.stem\),\s*"description": front_matter\.get\("description", ""\),\s*"prompt_template": prompt_section\.strip\(\),\s*\}\s*\n\s*\n',
-    # parse_driver_md
-    r'def parse_driver_md\(file_path: Path.*?\) -> dict:.*?return \{\s*"name": front_matter\.get\("name", file_path\.stem\),\s*"prompt_template": prompt_section\.strip\(\),\s*"temperature": float\(front_matter\.get\("temperature", [^)]+\)\),\s*\}\s*\n\s*\n',
-    # _CodeCheckFromSource / CodeCheckFromSource class
-    r'from okareo\.checks import BaseCheck\s*\n\s*\n\s*class _CodeCheckFromSource\(BaseCheck\):.*?raise NotImplementedError\("Evaluated on server"\)\s*\n\s*\n',
-    r'class _CodeCheckFromSource\(BaseCheck\):.*?raise NotImplementedError\("Evaluated on server"\)\s*\n\s*\n',
-    # parse_check_py_meta
-    r'def parse_check_py_meta\(file_path: Path\) -> dict:.*?return \{\s*"name": meta\.get\("name", file_path\.stem\),\s*"description": meta\.get\("description", ""\),\s*\}\s*\n\s*\n',
-    # parse_check_py_metadata
-    r'def parse_check_py_metadata\(file_path: Path\) -> dict:.*?"source": content,\s*\}\s*\n\s*\n',
-    # parse_check_py (LLM08 style)
-    r'def parse_check_py\(file_path: Path\) -> dict:.*?"code_contents": content,\s*\}\s*\n\s*\n',
-]
 
 # Target config + build replacement
 TARGET_BUILD_OLD = re.compile(
@@ -76,40 +55,6 @@ def update_cell_source(src: str, is_init: bool = False) -> str:
     # Replace init cell
     if is_init and "from okareo import Okareo" in src and "NOTEBOOK_DIR = Path" in src:
         return INIT_CELL_NEW
-
-    # Remove parse_check_md (standalone, before checks_dir)
-    out = re.sub(
-        r'def parse_check_md\(file_path: Path\) -> dict:.*?'
-        r'"prompt_template": prompt_section\.strip\(\),\s*\}\s*\n\s*\n\s*checks_dir',
-        "checks_dir",
-        out,
-        flags=re.DOTALL,
-    )
-
-    # Remove parse_driver_md (standalone, before drivers_dir)
-    out = re.sub(
-        r'def parse_driver_md\(file_path: Path[^)]*\) -> dict:.*?'
-        r'"temperature": float\(front_matter\.get\("temperature", [^)]+\)\),\s*\}\s*\n\s*\n\s*drivers_dir',
-        "drivers_dir",
-        out,
-        flags=re.DOTALL,
-    )
-
-    # Remove _CodeCheckFromSource class and parse_check_py_meta (LLM02 style)
-    out = re.sub(
-        r'from okareo\.checks import BaseCheck\s*\n\s*\n\s*'
-        r'class _CodeCheckFromSource\(BaseCheck\):.*?'
-        r'raise NotImplementedError\("Evaluated on server"\)\s*\n\s*\n\s*'
-        r'def parse_check_py_meta\(file_path: Path\) -> dict:.*?'
-        r'"description": meta\.get\("description", ""\),\s*\}\s*\n\s*\n\s*'
-        r'for py_path',
-        "for py_path",
-        out,
-        flags=re.DOTALL,
-    )
-
-    # Replace _CodeCheckFromSource with CodeCheckFromSource
-    out = out.replace("_CodeCheckFromSource(", "CodeCheckFromSource(")
 
     # Replace target config + build
     if "TARGET_ENV_PATH = CATEGORY_DIR.parent" in out:
