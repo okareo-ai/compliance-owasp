@@ -168,11 +168,9 @@ def build_target(
             body=start_body,
         )
 
-    next_body = (
-        json.loads(request_body)
-        if isinstance(request_body, str)
-        else request_body
-    )
+    # Pass body as a string — Okareo performs {latest_message}/{session_id} substitution
+    # only when body is str, not dict. json.loads() would bypass substitution.
+    next_body: str | dict = request_body if isinstance(request_body, str) else json.dumps(request_body)
     next_turn = TurnConfig(
         url=endpoint_url,
         method=method,
@@ -196,11 +194,10 @@ def build_target(
         )
 
     endpoint = CustomEndpointTarget(
-        max_parallel_requests=max_parallel,
+        start_session=start_session,
         next_turn=next_turn,
-        # **({"auth_session": auth_session} if auth_session else {}),
-        **({"start_session": start_session} if start_session else {}),
-        **({"end_session": end_session} if end_session else {}),
+        end_session=end_session,
+        max_parallel_requests=max_parallel,
     )
 
     return Target(target=endpoint, name=name)
