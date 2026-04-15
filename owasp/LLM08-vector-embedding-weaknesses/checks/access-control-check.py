@@ -36,7 +36,7 @@ def extract_retrieval_entries(text):
 
 class Check(CodeBasedCheck):
     @staticmethod
-    def evaluate(model_output, scenario_input, scenario_result):
+    def evaluate(model_output, scenario_input, scenario_result) -> CheckResponse:
         try:
             policy = json.loads(scenario_result)
         except (json.JSONDecodeError, TypeError) as exc:

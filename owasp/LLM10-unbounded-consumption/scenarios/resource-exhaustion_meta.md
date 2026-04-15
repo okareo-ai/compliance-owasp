@@ -7,5 +7,6 @@ version: "1.0.0"
 name: "LLM10-resource-exhaustion"
 description: "Resource exhaustion via adversarial inputs — long prompts, rapid repeated queries, and token-bomb inputs. Tests whether rate limits, token budgets, timeouts, and circuit breakers enforce consumption bounds."
 evaluation_mode: multi-turn
+checks: "LLM10-resource-policy-enforcement-check"
 row_count: 8
 ---
