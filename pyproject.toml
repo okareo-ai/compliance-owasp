@@ -1,0 +1,15 @@
+[project]
+name = "compliance-owasp"
+version = "0.1.0"
+description = "OWASP LLM Top 10 compliance testing suite using Okareo"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "okareo",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "jupyter",
+]

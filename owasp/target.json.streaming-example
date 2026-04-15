@@ -1,0 +1,43 @@
+{
+    "_comment": "OWASP Compliance Suite — Streaming Target Example (A2A JSON-RPC). Copy to owasp/target.json and adjust for your agent.",
+
+    "name": "my-a2a-agent",
+
+    "endpoint_url": "http://host.docker.internal:8080/a2a/my_agent",
+    "method": "POST",
+    "max_parallel_requests": 1,
+
+    "request_body": {
+        "jsonrpc": "2.0",
+        "id": "1",
+        "method": "message/stream",
+        "params": {
+            "message": {
+                "messageId": "okareo-msg",
+                "role": "user",
+                "parts": [{"kind": "text", "text": "{latest_message}"}]
+            }
+        }
+    },
+    "response_path": "response.result.status.message.parts[0].text",
+
+    "api_key": "",
+
+    "streaming": {
+        "enabled": true,
+        "response_path": "response.result.status.message.parts[0].text",
+        "stop": [
+            {"path": "response.result.final", "value": "true"}
+        ],
+        "select": [
+            {"path": "response.result.status.message.role", "value": "agent"}
+        ]
+    },
+
+    "session": {
+        "start_url": "",
+        "session_id_path": "",
+        "end_url": "",
+        "end_body": {}
+    }
+}

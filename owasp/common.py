@@ -2,7 +2,7 @@
 Shared utilities for OWASP LLM compliance notebooks.
 
 All notebooks import from this module for:
-- Target definition (loads from owasp/target.env; supports env path override for rotation)
+- Target definition (loads from owasp/target.json; supports path override for rotation)
 - Check/driver parsing (parse_artifact)
 - Code-based check registration (CodeCheckFromSource)
 - Pass-through driver template (SINGLE_TURN_DRIVER_TEMPLATE)
@@ -36,6 +36,9 @@ from okareo.model_under_test import (
     CustomEndpointTarget,
     EndSessionConfig,
     SessionConfig,
+    StreamingConfig,
+    StreamingSelectCondition,
+    StreamingStopCondition,
     Target,
     TurnConfig,
 )
@@ -68,69 +71,105 @@ def setup_notebook_context(globals_dict: dict) -> tuple[Path, Path]:
 
 
 # -----------------------------------------------------------------------------
-# Target definition — load from target.env, build Okareo Target
+# Target definition — load from target.json, build Okareo Target
 # -----------------------------------------------------------------------------
 
-DEFAULT_TARGET_ENV = "target.env"
+DEFAULT_TARGET_CONFIG = "target.json"
+
+
+def _load_target_config(config_path: Path) -> dict:
+    """Load target configuration from a JSON file or legacy .env file."""
+    suffix = config_path.suffix.lower()
+    if suffix == ".json":
+        with open(config_path, encoding="utf-8") as f:
+            return json.load(f)
+    # Legacy .env support
+    from dotenv import dotenv_values
+
+    env = dotenv_values(config_path)
+    # Convert flat env vars into the JSON structure
+    config: dict = {
+        "name": env.get("TARGET_NAME", "owasp-agent-target"),
+        "endpoint_url": env.get("TARGET_ENDPOINT_URL", ""),
+        "method": env.get("TARGET_METHOD", "POST"),
+        "max_parallel_requests": int(env.get("TARGET_MAX_PARALLEL_REQUESTS", "1")),
+        "request_body": env.get("TARGET_REQUEST_BODY", '{"message": "{latest_message}"}'),
+        "response_path": env.get("TARGET_RESPONSE_PATH", "response"),
+        "api_key": env.get("TARGET_API_KEY", ""),
+        "session": {
+            "auth_url": env.get("TARGET_AUTH_URL", ""),
+            "auth_body": env.get("TARGET_AUTH_BODY", ""),
+            "auth_response_token_path": env.get("TARGET_AUTH_RESPONSE_TOKEN_PATH", "response.access_token"),
+            "start_url": env.get("TARGET_SESSION_START_URL", ""),
+            "start_body": env.get("TARGET_SESSION_START_BODY", ""),
+            "session_id_path": env.get("TARGET_SESSION_ID_PATH", ""),
+            "end_url": env.get("TARGET_SESSION_END_URL", ""),
+            "end_body": env.get("TARGET_SESSION_END_BODY", ""),
+        },
+    }
+    return config
 
 
 def build_target(
     category_dir: Path,
+    config_path: Optional[Path | str] = None,
+    *,
     env_path: Optional[Path | str] = None,
 ) -> Target:
     """
     Build an Okareo Target from the shared target configuration.
 
-    Loads from owasp/target.env by default. Pass env_path to use a different
-    config file (e.g. for rotating between dev/staging/prod).
+    Loads from owasp/target.json by default. Pass config_path to use a different
+    config file (e.g. for rotating between dev/staging/prod). Legacy .env files
+    are also supported.
 
     Args:
         category_dir: Path to the OWASP category folder (e.g. owasp/LLM02-sensitive-info-disclosure).
-        env_path: Optional path to a .env file. Defaults to owasp/target.env.
+        config_path: Optional path to a .json (or legacy .env) config file.
+            Defaults to owasp/target.json.
+        env_path: Deprecated alias for config_path (backwards compatibility).
 
     Returns:
         Okareo Target instance ready for run_simulation.
 
     Example:
         target = build_target(CATEGORY_DIR)
-        target = build_target(CATEGORY_DIR, env_path="owasp/target.prod.env")
+        target = build_target(CATEGORY_DIR, config_path="owasp/target.prod.json")
     """
-    owasp_dir = category_dir.parent
-    env_file = Path(env_path) if env_path else owasp_dir / DEFAULT_TARGET_ENV
-    if not env_file.is_absolute():
-        env_file = owasp_dir / env_file
+    # Backwards compat: env_path → config_path
+    effective_path = config_path or env_path
 
-    if not env_file.exists():
+    owasp_dir = category_dir.parent
+    if effective_path:
+        cfg_file = Path(effective_path)
+    else:
+        cfg_file = owasp_dir / DEFAULT_TARGET_CONFIG
+    if not cfg_file.is_absolute():
+        cfg_file = owasp_dir / cfg_file
+
+    if not cfg_file.exists():
         raise FileNotFoundError(
-            f"Target config not found at {env_file}. "
-            f"Copy owasp/target.env.example to {env_file} and fill in your values."
+            f"Target config not found at {cfg_file}. "
+            f"Copy owasp/target.json.example to {cfg_file} and fill in your values."
         )
 
-    from dotenv import dotenv_values
+    config = _load_target_config(cfg_file)
 
-    config = dotenv_values(env_file)
+    name = config.get("name", "owasp-agent-target")
+    endpoint_url = config.get("endpoint_url")
+    method = config.get("method", "POST")
+    max_parallel = int(config.get("max_parallel_requests", 1))
 
-    name = config.get("TARGET_NAME", "owasp-agent-target")
-    endpoint_url = config.get("TARGET_ENDPOINT_URL")
-    method = config.get("TARGET_METHOD", "POST")
-    max_parallel = int(config.get("TARGET_MAX_PARALLEL_REQUESTS", 1))
+    api_key = config.get("api_key", "")
+    response_path = config.get("response_path", "response")
 
-    session_auth_url = config.get("TARGET_AUTH_URL", "")
-    session_auth_body = config.get("TARGET_AUTH_BODY", "")
-    session_auth_response_token_path = config.get("TARGET_AUTH_RESPONSE_TOKEN_PATH", "response.access_token")
+    # request_body: accept dict (from JSON config) or string (from legacy .env)
+    raw_body = config.get("request_body", {"message": "{latest_message}"})
 
-
-    api_key = config.get("TARGET_API_KEY", "")
-    request_body = config.get("TARGET_REQUEST_BODY", '{"message": "{latest_message}"}')
-    response_path = config.get("TARGET_RESPONSE_PATH", "response")
-    session_start_url = config.get("TARGET_SESSION_START_URL", "")
-    session_start_body = config.get("TARGET_SESSION_START_BODY", "")
-    session_id_path = config.get("TARGET_SESSION_ID_PATH", "")
-    session_end_url = config.get("TARGET_SESSION_END_URL", "")
-    session_end_body = config.get("TARGET_SESSION_END_BODY", "")
+    session = config.get("session", {})
 
     if not endpoint_url:
-        raise ValueError(f"TARGET_ENDPOINT_URL not set in {env_file}.")
+        raise ValueError(f"endpoint_url not set in {cfg_file}.")
 
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     if api_key:
@@ -138,14 +177,15 @@ def build_target(
         headers["Authorization"] = f"Bearer {api_key}"
     headers_json = json.dumps(headers)
 
-
+    session_auth_url = session.get("auth_url", "")
     auth_session = None
     if session_auth_url:
+        auth_body_raw = session.get("auth_body", {})
         auth_body = (
-            json.loads(session_auth_body)
-            if isinstance(session_auth_body, str) and session_auth_body
-            else {}
+            json.loads(auth_body_raw) if isinstance(auth_body_raw, str) and auth_body_raw else auth_body_raw
         )
+        if not isinstance(auth_body, dict):
+            auth_body = {}
         auth_session = SessionConfig(
             url=session_auth_url,
             method="POST",
@@ -153,39 +193,66 @@ def build_target(
             body=auth_body,
         )
 
+    session_start_url = session.get("start_url", "")
     start_session = None
     if session_start_url:
+        start_body_raw = session.get("start_body", {})
         start_body = (
-            json.loads(session_start_body)
-            if isinstance(session_start_body, str) and session_start_body
-            else {}
+            json.loads(start_body_raw) if isinstance(start_body_raw, str) and start_body_raw else start_body_raw
         )
+        if not isinstance(start_body, dict):
+            start_body = {}
         start_session = SessionConfig(
             url=session_start_url,
             method="POST",
             headers=headers_json,
-            response_session_id_path=session_id_path or "response.session_id",
+            response_session_id_path=session.get("session_id_path", "") or "response.session_id",
             body=start_body,
         )
 
     # Pass body as a string — Okareo performs {latest_message}/{session_id} substitution
     # only when body is str, not dict. json.loads() would bypass substitution.
-    next_body: str | dict = request_body if isinstance(request_body, str) else json.dumps(request_body)
+    if isinstance(raw_body, dict):
+        next_body = json.dumps(raw_body)
+    else:
+        next_body = raw_body
+
+    # Streaming configuration (optional)
+    streaming_section = config.get("streaming", {})
+    streaming_enabled = streaming_section.get("enabled", False)
+    streaming_config = None
+    if streaming_enabled:
+        headers["Accept"] = "text/event-stream"
+        headers_json = json.dumps(headers)
+
+        streaming_response_path = streaming_section.get("response_path", "")
+        if streaming_response_path:
+            response_path = streaming_response_path
+
+        stop_raw = streaming_section.get("stop", [])
+        select_raw = streaming_section.get("select", [])
+        stop = [StreamingStopCondition(**c) for c in stop_raw]
+        select = [StreamingSelectCondition(**c) for c in select_raw]
+        streaming_config = StreamingConfig(stop=stop, select=select)
+
     next_turn = TurnConfig(
         url=endpoint_url,
         method=method,
         headers=headers_json,
         body=next_body,
         response_message_path=response_path,
+        streaming=streaming_config,
     )
 
+    session_end_url = session.get("end_url", "")
     end_session = None
     if session_end_url:
+        end_body_raw = session.get("end_body", {})
         end_body = (
-            json.loads(session_end_body)
-            if isinstance(session_end_body, str) and session_end_body
-            else {}
+            json.loads(end_body_raw) if isinstance(end_body_raw, str) and end_body_raw else end_body_raw
         )
+        if not isinstance(end_body, dict):
+            end_body = {}
         end_session = EndSessionConfig(
             url=session_end_url,
             method="POST",

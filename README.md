@@ -4,6 +4,79 @@ A standalone, forkable repository for running **OWASP LLM Top 10 (2025)** compli
 
 ---
 
+## Quick Start
+
+### Prerequisites
+
+- **Python 3.11+**
+- **[uv](https://docs.astral.sh/uv/)** (recommended) or pip
+- **Okareo account** — [Sign up](https://app.okareo.com) and obtain an API key
+
+### 1. Clone and configure
+
+```bash
+git clone https://github.com/okareo-ai/compliance-owasp.git
+cd compliance-owasp
+cp owasp/config.env.example .env
+cp owasp/target.json.example owasp/target.json
+# Edit .env (OKAREO_API_KEY) and owasp/target.json (your agent)
+```
+
+### 2. Install dependencies
+
+```bash
+# Using uv (recommended)
+uv sync
+
+# Or using pip
+pip install .
+```
+
+### 3. Run an evaluation
+
+```bash
+# Via uv (no activation needed)
+uv run python run_suite.py --dir LLM01-prompt-injection
+
+# Via CLI (if using env where pip install was used)
+python run_suite.py --dir LLM01-prompt-injection
+
+# Or via notebook
+# Open owasp/LLM01-prompt-injection/notebooks/run-evaluation.ipynb and run all cells
+```
+
+### CLI Runner (`run_suite.py`)
+
+`run_suite.py` is a command-line alternative to the notebooks. It uploads all artifacts (scenarios, checks, drivers) and runs the full evaluation in one command.
+
+```bash
+# Run a full suite
+python run_suite.py --dir LLM06-excessive-agency
+
+# Override max turns for multi-turn simulations
+python run_suite.py --dir LLM06-excessive-agency --max-turns 8
+
+# Run a single simulation by name substring
+python run_suite.py --dir LLM07-system-prompt-leakage --sim iterative-extraction
+
+# Upload artifacts only (no evaluation)
+python run_suite.py --dir LLM01-prompt-injection --upload-only
+
+# Use a different target config (e.g. for a separate environment)
+python run_suite.py --dir LLM01-prompt-injection --target owasp/target.prod.json
+```
+
+| Flag | Description |
+|------|-------------|
+| `--dir` | **(required)** Category directory name under `owasp/` (e.g. `LLM01-prompt-injection`) |
+| `--max-turns` | Override max turns for all multi-turn simulations |
+| `--sim` | Run only simulations whose scenario name contains this substring |
+| `--upload-only` | Upload artifacts without running evaluation |
+| `--eval-only` | Run evaluation only (assumes artifacts are already uploaded) |
+| `--target` | Path to target config file (default: `owasp/target.json`) |
+
+---
+
 ## 1. Purpose and Approach
 
 ### What This Project Does
@@ -46,8 +119,9 @@ This project provides a complete test suite for validating AI agents against the
 ### Prerequisites
 
 - **Python 3.11+**
+- **[uv](https://docs.astral.sh/uv/)** (recommended) or pip
 - **Okareo account** — [Sign up](https://app.okareo.com) and obtain an API key
-- **Jupyter** — for running notebooks (e.g. `pip install jupyter` or use VS Code / Cursor)
+- **Jupyter** — for running notebooks (included as a dev dependency, or use VS Code / Cursor)
 
 ### Step 1: Clone the Repository
 
@@ -56,7 +130,18 @@ git clone https://github.com/okareo-ai/compliance-owasp.git
 cd compliance-owasp
 ```
 
-### Step 2: Configure Okareo API Key
+### Step 2: Install Dependencies
+
+```bash
+# Using uv (recommended) — creates a virtualenv and installs all dependencies
+uv sync
+
+# Or using pip in your own virtualenv
+python -m venv .venv && source .venv/bin/activate
+pip install .
+```
+
+### Step 3: Configure Okareo API Key
 
 ```bash
 cp owasp/config.env.example .env
@@ -68,30 +153,24 @@ Edit `.env` and set your Okareo API key:
 OKAREO_API_KEY=your_okareo_api_key_here
 ```
 
-### Step 3: Configure Your Target Agent
+### Step 4: Configure Your Target Agent
 
 ```bash
-cp owasp/target.env.example owasp/target.env
+cp owasp/target.json.example owasp/target.json
 ```
 
-Edit `owasp/target.env` with your agent’s endpoint and request format:
+Edit `owasp/target.json` with your agent's endpoint and request format:
 
-- `TARGET_NAME` — human-readable name for the agent
-- `TARGET_ENDPOINT_URL` — HTTP endpoint that accepts user messages and returns responses
-- `TARGET_REQUEST_BODY` — JSON template (use `{latest_message}` for the user message)
-- `TARGET_RESPONSE_PATH` — JSONPath to the assistant’s response text (e.g. `response` or `choices[0].message.content`)
+- `name` — human-readable name for the agent
+- `endpoint_url` — HTTP endpoint that accepts user messages and returns responses
+- `request_body` — JSON object template (use `{latest_message}` for the user message)
+- `response_path` — JSONPath to the assistant's response text (e.g. `response` or `choices[0].message.content`)
 
-See `owasp/target.env.example` for full options (auth, session management, etc.).
+See `owasp/target.json.example` for full options (auth, session management, etc.).
 
-### Step 4: Install Dependencies and Run a Notebook
+### Step 5: Run a Notebook
 
-Each notebook installs `okareo` and `python-dotenv` via `%pip install` in the first cell. You can also install them globally:
-
-```bash
-pip install okareo python-dotenv
-```
-
-Then open any category notebook, for example:
+Open any category notebook, for example:
 
 ```
 owasp/LLM01-prompt-injection/notebooks/run-evaluation.ipynb
@@ -108,7 +187,7 @@ Run all cells. The notebook will:
 ```
 owasp/
 ├── config.env.example      # → copy to .env (OKAREO_API_KEY)
-├── target.env.example      # → copy to owasp/target.env (agent config)
+├── target.json.example     # → copy to owasp/target.json (agent config)
 ├── common.py               # Shared utilities for all notebooks
 ├── LLM01-prompt-injection/
 │   ├── scenarios/         # .jsonl test inputs
@@ -132,11 +211,11 @@ owasp/
 
 ### Point at Your Agent
 
-1. Copy `owasp/target.env.example` to `owasp/target.env`.
-2. Set `TARGET_ENDPOINT_URL` to your agent’s chat/API endpoint.
-3. Adjust `TARGET_REQUEST_BODY` and `TARGET_RESPONSE_PATH` to match your API contract.
+1. Copy `owasp/target.json.example` to `owasp/target.json`.
+2. Set `endpoint_url` to your agent's chat/API endpoint.
+3. Adjust `request_body` and `response_path` to match your API contract.
 
-All category notebooks read from `owasp/target.env`, so one config drives the full suite.
+All category notebooks read from `owasp/target.json`, so one config drives the full suite.
 
 ### Customize for Your Use Case
 
@@ -145,7 +224,7 @@ All category notebooks read from `owasp/target.env`, so one config drives the fu
 | **Scenarios** | `owasp/LLMxx-*/scenarios/*.jsonl` | Add or edit seed inputs for your domain (e.g. network, finance, healthcare). |
 | **Checks** | `owasp/LLMxx-*/checks/*.md` or `*.py` | Add model-based or code-based checks for your policies. |
 | **Drivers** | `owasp/LLMxx-*/drivers/*.md` | Add adversarial personas that match your threat model. |
-| **Target config** | `owasp/target.env` | Use different env files (e.g. `target.prod.env`) for multiple environments. |
+| **Target config** | `owasp/target.json` | Use different config files (e.g. `target.prod.json`) for multiple environments. |
 
 ### Example: Network Infrastructure Agent
 
@@ -212,54 +291,4 @@ This project uses [Spec-Kit](https://github.com/github/spec-kit) for spec-driven
 
 - **GitHub**: [github/spec-kit](https://github.com/github/spec-kit)
 - **Documentation**: See the repo README and `.specify/` folder in this project
-
----
-
-## Quick Start Summary
-
-```bash
-# 1. Clone and configure
-git clone https://github.com/okareo-ai/compliance-owasp.git
-cd compliance-owasp
-cp owasp/config.env.example .env
-cp owasp/target.env.example owasp/target.env
-# Edit .env (OKAREO_API_KEY) and owasp/target.env (your agent)
-
-# 2a. Run via notebook
-# Open owasp/LLM01-prompt-injection/notebooks/run-evaluation.ipynb
-# Execute all cells
-
-# 2b. Run via CLI (alternative)
-python run_suite.py --dir LLM01-prompt-injection
-```
-
-### CLI Runner (`run_suite.py`)
-
-`run_suite.py` is a command-line alternative to the notebooks. It uploads all artifacts (scenarios, checks, drivers) and runs the full evaluation in one command.
-
-```bash
-# Run a full suite
-python run_suite.py --dir LLM06-excessive-agency
-
-# Override max turns for multi-turn simulations
-python run_suite.py --dir LLM06-excessive-agency --max-turns 8
-
-# Run a single simulation by name substring
-python run_suite.py --dir LLM07-system-prompt-leakage --sim iterative-extraction
-
-# Upload artifacts only (no evaluation)
-python run_suite.py --dir LLM01-prompt-injection --upload-only
-
-# Use a different target config
-python run_suite.py --dir LLM01-prompt-injection --target-env owasp/target.prod.env
-```
-
-| Flag | Description |
-|------|-------------|
-| `--dir` | **(required)** Category directory name under `owasp/` (e.g. `LLM01-prompt-injection`) |
-| `--max-turns` | Override max turns for all multi-turn simulations |
-| `--sim` | Run only simulations whose scenario name contains this substring |
-| `--upload-only` | Upload artifacts without running evaluation |
-| `--eval-only` | Run evaluation only (assumes artifacts are already uploaded) |
-| `--target-env` | Path to target env file (default: `owasp/target.env`) |
 
