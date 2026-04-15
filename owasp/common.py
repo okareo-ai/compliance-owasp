@@ -279,6 +279,9 @@ def init_okareo() -> tuple[Okareo, str]:
     """
     Initialize Okareo client and validate API key.
 
+    Reads OKAREO_API_KEY (required) and OKAREO_BASE_URL (optional) from
+    environment variables.
+
     Returns:
         (okareo, OKAREO_API_KEY)
     """
@@ -289,7 +292,11 @@ def init_okareo() -> tuple[Okareo, str]:
         raise ValueError(
             "OKAREO_API_KEY not set. Copy owasp/config.env.example to .env and set your key."
         )
-    okareo = Okareo(api_key)
+    base_url = os.environ.get("OKAREO_BASE_URL")
+    if base_url:
+        okareo = Okareo(api_key, base_url=base_url)
+    else:
+        okareo = Okareo(api_key)
     return okareo, api_key
 
 
