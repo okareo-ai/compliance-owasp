@@ -18,8 +18,14 @@ A standalone, forkable repository for running **OWASP LLM Top 10 (2025)** compli
 git clone https://github.com/okareo-ai/compliance-owasp.git
 cd compliance-owasp
 cp owasp/config.env.example .env
+
+# If your target is non-streaming, then copy the vanilla example
 cp owasp/target.json.example owasp/target.json
-# Edit .env (OKAREO_API_KEY) and owasp/target.json (your agent)
+
+# If your target is streaming, then copy the streaming example
+cp owasp/target.json.streaming-example owasp/target.json
+
+# Edit .env (OKAREO_API_KEY/OKAREO_BASE_URL) and owasp/target.json (your agent)
 ```
 
 ### 2. Install dependencies
@@ -35,11 +41,11 @@ pip install .
 ### 3. Run an evaluation
 
 ```bash
-# Via uv (no activation needed)
-uv run python run_suite.py --dir LLM01-prompt-injection
-
-# Via CLI (if using env where pip install was used)
+# Via CLI (if venv is activated)
 python run_suite.py --dir LLM01-prompt-injection
+
+# Or via uv (no activation needed)
+uv run python run_suite.py --dir LLM01-prompt-injection
 
 # Or via notebook
 # Open owasp/LLM01-prompt-injection/notebooks/run-evaluation.ipynb and run all cells
@@ -151,12 +157,21 @@ Edit `.env` and set your Okareo API key:
 
 ```
 OKAREO_API_KEY=your_okareo_api_key_here
+
+# Optional: override the Okareo API base URL (defaults to https://api.okareo.com)
+# OKAREO_BASE_URL=https://api.okareo.com
 ```
 
 ### Step 4: Configure Your Target Agent
 
+Two example configs are provided — choose the one that matches your target:
+
 ```bash
+# Standard (non-streaming) target
 cp owasp/target.json.example owasp/target.json
+
+# SSE streaming target (e.g. OpenAI-compatible or custom streaming endpoint)
+cp owasp/target.json.streaming-example owasp/target.json
 ```
 
 Edit `owasp/target.json` with your agent's endpoint and request format:
@@ -166,7 +181,7 @@ Edit `owasp/target.json` with your agent's endpoint and request format:
 - `request_body` — JSON object template (use `{latest_message}` for the user message)
 - `response_path` — JSONPath to the assistant's response text (e.g. `response` or `choices[0].message.content`)
 
-See `owasp/target.json.example` for full options (auth, session management, etc.).
+See `owasp/target.json.example` for full options (auth, session management). The streaming example additionally includes `streaming.stop` and `streaming.select` conditions for SSE event parsing.
 
 ### Step 5: Run a Notebook
 
