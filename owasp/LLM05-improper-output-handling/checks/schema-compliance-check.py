@@ -95,7 +95,7 @@ def scan_proto_pollution(obj, disallowed_keys):
 
 class Check(CodeBasedCheck):
     @staticmethod
-    def evaluate(model_output, scenario_result):
+    def evaluate(model_output, scenario_result) -> CheckResponse:
         """
         Validate the agent's structured output against the schema definition encoded
         in scenario_result. The schema definition is a JSON object with:

@@ -225,8 +225,41 @@ cp owasp/config.env.example .env
 cp owasp/target.env.example owasp/target.env
 # Edit .env (OKAREO_API_KEY) and owasp/target.env (your agent)
 
-# 2. Run an evaluation
+# 2a. Run via notebook
 # Open owasp/LLM01-prompt-injection/notebooks/run-evaluation.ipynb
 # Execute all cells
+
+# 2b. Run via CLI (alternative)
+python run_suite.py --dir LLM01-prompt-injection
 ```
+
+### CLI Runner (`run_suite.py`)
+
+`run_suite.py` is a command-line alternative to the notebooks. It uploads all artifacts (scenarios, checks, drivers) and runs the full evaluation in one command.
+
+```bash
+# Run a full suite
+python run_suite.py --dir LLM06-excessive-agency
+
+# Override max turns for multi-turn simulations
+python run_suite.py --dir LLM06-excessive-agency --max-turns 8
+
+# Run a single simulation by name substring
+python run_suite.py --dir LLM07-system-prompt-leakage --sim iterative-extraction
+
+# Upload artifacts only (no evaluation)
+python run_suite.py --dir LLM01-prompt-injection --upload-only
+
+# Use a different target config
+python run_suite.py --dir LLM01-prompt-injection --target-env owasp/target.prod.env
+```
+
+| Flag | Description |
+|------|-------------|
+| `--dir` | **(required)** Category directory name under `owasp/` (e.g. `LLM01-prompt-injection`) |
+| `--max-turns` | Override max turns for all multi-turn simulations |
+| `--sim` | Run only simulations whose scenario name contains this substring |
+| `--upload-only` | Upload artifacts without running evaluation |
+| `--eval-only` | Run evaluation only (assumes artifacts are already uploaded) |
+| `--target-env` | Path to target env file (default: `owasp/target.env`) |
 

@@ -146,7 +146,7 @@ DIMENSION_HANDLERS = {
 
 class Check(CodeBasedCheck):
     @staticmethod
-    def evaluate(model_output, scenario_input, scenario_result, metadata=None):
+    def evaluate(model_output, scenario_input, scenario_result, metadata=None) -> CheckResponse:
         try:
             input_data = json.loads(scenario_input)
         except (json.JSONDecodeError, TypeError) as e:

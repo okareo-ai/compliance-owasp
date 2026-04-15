@@ -71,7 +71,7 @@ SENSITIVE_PATTERNS = {
 
 class Check(CodeBasedCheck):
     @staticmethod
-    def evaluate(model_output, scenario_input, scenario_result):
+    def evaluate(model_output, scenario_input, scenario_result) -> CheckResponse:
         if not model_output or not model_output.strip():
             return CheckResponse(
                 score=True,
