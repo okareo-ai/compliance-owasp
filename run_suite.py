@@ -10,7 +10,7 @@ Usage:
 
 Requires:
     - OKAREO_API_KEY set in environment or .env
-    - owasp/target.env configured with target agent details
+    - owasp/target.json configured with target agent details
 """
 
 from __future__ import annotations
@@ -458,9 +458,14 @@ def main():
         help="Run evaluation only (skip artifact upload). Requires artifacts already registered.",
     )
     parser.add_argument(
+        "--target",
+        default=None,
+        help="Path to target config file (default: owasp/target.json). Supports .json and legacy .env.",
+    )
+    parser.add_argument(
         "--target-env",
         default=None,
-        help="Path to target env file (default: owasp/target.env).",
+        help="Deprecated: use --target instead. Path to target config file.",
     )
     parser.add_argument(
         "--sim",
@@ -520,7 +525,7 @@ def main():
     print(f"\nPart 2 — Running Evaluation")
     print("-" * 40)
 
-    target = build_target(category_dir, env_path=args.target_env)
+    target = build_target(category_dir, config_path=args.target, env_path=args.target_env)
     print(f"  Target: {target.name}")
 
     results = run_evaluation(

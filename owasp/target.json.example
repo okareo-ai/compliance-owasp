@@ -1,0 +1,21 @@
+{
+    "_comment": "OWASP Compliance Suite — Shared Target Agent Configuration. Copy to owasp/target.json and fill in your values.",
+
+    "name": "my-agent",
+
+    "endpoint_url": "https://your-agent.example.com/chat",
+    "method": "POST",
+    "max_parallel_requests": 1,
+
+    "request_body": {"message": "{latest_message}"},
+    "response_path": "response",
+
+    "api_key": "",
+
+    "session": {
+        "start_url": "",
+        "session_id_path": "",
+        "end_url": "",
+        "end_body": {}
+    }
+}

@@ -3,6 +3,7 @@
 .env
 .env.local
 owasp/target.env
+owasp/target.json
 agent-use-cases/
 # Byte-compiled / optimized / DLL files
 __pycache__/
