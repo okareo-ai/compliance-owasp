@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 # Ensure project root is importable
@@ -380,6 +381,7 @@ def run_evaluation(
                 )
 
             sim_name = f"{category_prefix} {'Simulation' if is_multi else 'Eval'} — {scenario_name}"
+            t0 = time.monotonic()
             test_run = okareo.run_simulation(
                 target=target,
                 driver=driver,
@@ -390,8 +392,9 @@ def run_evaluation(
                 max_turns=max_turns,
                 checks=checks,
             )
-            results[scenario_name] = test_run
-            print(f"  ✓ Complete: {test_run.id}")
+            elapsed = time.monotonic() - t0
+            results[scenario_name] = (test_run, elapsed)
+            print(f"  ✓ Complete: {test_run.id} ({elapsed:.1f}s)")
             if hasattr(test_run, "app_link") and test_run.app_link:
                 print(f"  View: {test_run.app_link}")
         except Exception as e:
@@ -411,15 +414,17 @@ def print_summary(category_prefix: str, results: dict):
     print(f"\n{'=' * 70}")
     print(f"{category_prefix} — EVALUATION RESULTS")
     print(f"{'=' * 70}")
-    print(f"\n{'Scenario':<50} {'Status':<10} {'Run ID / Link'}")
-    print("-" * 100)
+    print(f"\n{'Scenario':<50} {'Status':<10} {'Run Time':<10} {'Run ID / Link'}")
+    print("-" * 110)
 
     for name, result in results.items():
         if result is None:
-            print(f"{name:<50} {'ERROR':<10} N/A")
+            print(f"{name:<50} {'ERROR':<10} {'N/A':<10} N/A")
         else:
-            link = getattr(result, "app_link", None) or result.id
-            print(f"{name:<50} {'COMPLETE':<10} {link}")
+            test_run, elapsed = result
+            link = getattr(test_run, "app_link", None) or test_run.id
+            runtime = f"{elapsed:.1f}s"
+            print(f"{name:<50} {'COMPLETE':<10} {runtime:<10} {link}")
 
     errors = sum(1 for r in results.values() if r is None)
     total = len(results)
@@ -472,7 +477,6 @@ def main():
         default=None,
         help="Run only simulations whose scenario name contains this substring.",
     )
-
     args = parser.parse_args()
 
     owasp_dir = PROJECT_ROOT / "owasp"

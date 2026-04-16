@@ -235,12 +235,15 @@ def build_target(
         select = [StreamingSelectCondition(**c) for c in select_raw]
         streaming_config = StreamingConfig(stop=stop, select=select)
 
+    session_id_path = session.get("session_id_path", "")
+
     next_turn = TurnConfig(
         url=endpoint_url,
         method=method,
         headers=headers_json,
         body=next_body,
         response_message_path=response_path,
+        response_session_id_path=session_id_path,
         streaming=streaming_config,
     )
 
@@ -294,7 +297,7 @@ def init_okareo() -> tuple[Okareo, str]:
         )
     base_url = os.environ.get("OKAREO_BASE_URL")
     if base_url:
-        okareo = Okareo(api_key, base_url=base_url)
+        okareo = Okareo(api_key, base_path=base_url)
     else:
         okareo = Okareo(api_key)
     return okareo, api_key
