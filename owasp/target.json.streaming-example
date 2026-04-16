@@ -23,6 +23,14 @@
 
     "api_key": "",
 
+    "auth": {
+        "url": "",
+        "method": "POST",
+        "headers": {},
+        "body": {},
+        "response_access_token_path": "response.access_token"
+    },
+
     "streaming": {
         "enabled": true,
         "response_path": "response.result.status.message.parts[0].text",

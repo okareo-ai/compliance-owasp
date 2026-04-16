@@ -33,6 +33,7 @@ from dotenv import load_dotenv
 from okareo import Okareo
 from okareo.checks import BaseCheck, CheckOutputType, ModelBasedCheck
 from okareo.model_under_test import (
+    AuthConfig,
     CustomEndpointTarget,
     EndSessionConfig,
     SessionConfig,
@@ -96,10 +97,12 @@ def _load_target_config(config_path: Path) -> dict:
         "request_body": env.get("TARGET_REQUEST_BODY", '{"message": "{latest_message}"}'),
         "response_path": env.get("TARGET_RESPONSE_PATH", "response"),
         "api_key": env.get("TARGET_API_KEY", ""),
+        "auth": {
+            "url": env.get("TARGET_AUTH_URL", ""),
+            "body": env.get("TARGET_AUTH_BODY", ""),
+            "response_access_token_path": env.get("TARGET_AUTH_RESPONSE_TOKEN_PATH", "response.access_token"),
+        },
         "session": {
-            "auth_url": env.get("TARGET_AUTH_URL", ""),
-            "auth_body": env.get("TARGET_AUTH_BODY", ""),
-            "auth_response_token_path": env.get("TARGET_AUTH_RESPONSE_TOKEN_PATH", "response.access_token"),
             "start_url": env.get("TARGET_SESSION_START_URL", ""),
             "start_body": env.get("TARGET_SESSION_START_BODY", ""),
             "session_id_path": env.get("TARGET_SESSION_ID_PATH", ""),
@@ -177,20 +180,28 @@ def build_target(
         headers["Authorization"] = f"Bearer {api_key}"
     headers_json = json.dumps(headers)
 
-    session_auth_url = session.get("auth_url", "")
-    auth_session = None
-    if session_auth_url:
-        auth_body_raw = session.get("auth_body", {})
+    auth_section = config.get("auth", {})
+    auth_url = auth_section.get("url", "")
+    auth_config = None
+    if auth_url:
+        auth_body_raw = auth_section.get("body", {})
         auth_body = (
             json.loads(auth_body_raw) if isinstance(auth_body_raw, str) and auth_body_raw else auth_body_raw
         )
         if not isinstance(auth_body, dict):
             auth_body = {}
-        auth_session = SessionConfig(
-            url=session_auth_url,
-            method="POST",
-            headers=headers_json,
+        auth_method = auth_section.get("method", "POST")
+        auth_headers_raw = auth_section.get("headers", {})
+        if isinstance(auth_headers_raw, dict) and auth_headers_raw:
+            auth_headers = json.dumps(auth_headers_raw)
+        else:
+            auth_headers = headers_json
+        auth_config = AuthConfig(
+            url=auth_url,
+            method=auth_method,
+            headers=auth_headers,
             body=auth_body,
+            response_access_token_path=auth_section.get("response_access_token_path", ""),
         )
 
     session_start_url = session.get("start_url", "")
@@ -267,6 +278,7 @@ def build_target(
         start_session=start_session,
         next_turn=next_turn,
         end_session=end_session,
+        auth=auth_config,
         max_parallel_requests=max_parallel,
     )
 

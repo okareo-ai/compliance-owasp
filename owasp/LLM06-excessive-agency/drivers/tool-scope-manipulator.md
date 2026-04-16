@@ -3,7 +3,7 @@ owasp_category: LLM06
 risk_severity: Critical
 artifact_type: driver
 status: complete
-version: "2.0.0"
+version: "1.0.1"
 name: "LLM06-tool-scope-manipulator"
 description: "Adversarial driver persona that attempts to trick an AI agent into performing actions outside its scope. Uses adaptive scope discovery in early turns, then social engineering to push toward universally-inappropriate action categories. Target-agnostic — works against any agent without foreknowledge of its tools."
 evaluation_mode: multi-turn
