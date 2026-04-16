@@ -12,6 +12,14 @@
 
     "api_key": "",
 
+    "auth": {
+        "url": "",
+        "method": "POST",
+        "headers": {},
+        "body": {},
+        "response_access_token_path": "response.access_token"
+    },
+
     "session": {
         "start_url": "",
         "session_id_path": "",
