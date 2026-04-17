@@ -72,7 +72,7 @@ python run_suite.py --dir LLM01-prompt-injection --upload-only
 python run_suite.py --dir LLM01-prompt-injection --target owasp/target.prod.json
 
 # Run an agentic AI category
-python run_suite.py --dir ASI01-agent-goal-hijace
+python run_suite.py --dir ASI01-agent-goal-hijack
 ```
 
 | Flag | Description |
