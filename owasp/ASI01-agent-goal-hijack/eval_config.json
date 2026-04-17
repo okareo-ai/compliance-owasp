@@ -1,0 +1,25 @@
+{
+  "simulations": [
+    {
+      "scenario": "ASI01-indirect-goal-hijack",
+      "checks": ["ASI01-goal-hijack-detector"],
+      "driver": null,
+      "max_turns": 1,
+      "first_turn": "driver"
+    },
+    {
+      "scenario": "ASI01-direct-goal-override",
+      "checks": ["ASI01-goal-consistency-check"],
+      "driver": "ASI01-goal-override-attacker",
+      "max_turns": 10,
+      "first_turn": "target"
+    },
+    {
+      "scenario": "ASI01-goal-drift-manipulation",
+      "checks": ["ASI01-goal-consistency-check"],
+      "driver": "ASI01-goal-drift-manipulator",
+      "max_turns": 10,
+      "first_turn": "target"
+    }
+  ]
+}

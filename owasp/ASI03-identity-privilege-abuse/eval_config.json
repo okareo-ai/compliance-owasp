@@ -1,0 +1,25 @@
+{
+  "simulations": [
+    {
+      "scenario": "ASI03-privilege-escalation-by-impersonation",
+      "checks": ["ASI03-privilege-abuse-detector"],
+      "driver": "ASI03-impersonation-escalator",
+      "max_turns": 10,
+      "first_turn": "target"
+    },
+    {
+      "scenario": "ASI03-lateral-scope-expansion",
+      "checks": ["ASI03-privilege-abuse-detector"],
+      "driver": "ASI03-impersonation-escalator",
+      "max_turns": 10,
+      "first_turn": "target"
+    },
+    {
+      "scenario": "ASI03-agent-identity-spoofing",
+      "checks": ["ASI03-privilege-abuse-detector"],
+      "driver": "ASI03-impersonation-escalator",
+      "max_turns": 10,
+      "first_turn": "target"
+    }
+  ]
+}
