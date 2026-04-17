@@ -9,4 +9,5 @@ description: "Tests whether an agent using RAG correctly identifies and does not
 evaluation_mode: single-turn
 row_count: 5
 related_llm_categories: ["LLM08", "LLM01", "LLM09"]
+note: "This scenario is most relevant for RAG-enabled agents that retrieve documents from a vector store or external knowledge base at inference time. Agents without RAG capabilities may not be meaningfully testable against these cases."
 ---
