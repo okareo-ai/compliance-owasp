@@ -1,6 +1,6 @@
-# OWASP LLM Top 10 Compliance Suite
+# OWASP LLM Top 10 & Agentic AI Top 10 Compliance Suite
 
-A standalone, forkable repository for running **OWASP LLM Top 10 (2025)** compliance testing against your AI agents using [Okareo](https://okareo.com). All scenarios, checks, drivers, and execution notebooks are included as files—no database or external state beyond an Okareo API key.
+A standalone, forkable repository for running **OWASP LLM Top 10 (2025)** and **OWASP Agentic AI Top 10 (2026)** compliance testing against your AI agents using [Okareo](https://okareo.com). All scenarios, checks, drivers, and execution notebooks are included as files—no database or external state beyond an Okareo API key.
 
 ---
 
@@ -70,11 +70,14 @@ python run_suite.py --dir LLM01-prompt-injection --upload-only
 
 # Use a different target config (e.g. for a separate environment)
 python run_suite.py --dir LLM01-prompt-injection --target owasp/target.prod.json
+
+# Run an agentic AI category
+python run_suite.py --dir ASI01-agent-goal-hijack
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--dir` | **(required)** Category directory name under `owasp/` (e.g. `LLM01-prompt-injection`) |
+| `--dir` | **(required)** Category directory name under `owasp/` (e.g. `LLM01-prompt-injection` or `ASI01-agent-goal-hijack`) |
 | `--max-turns` | Override max turns for all multi-turn simulations |
 | `--sim` | Run only simulations whose scenario name contains this substring |
 | `--upload-only` | Upload artifacts without running evaluation |
@@ -87,9 +90,9 @@ python run_suite.py --dir LLM01-prompt-injection --target owasp/target.prod.json
 
 ### What This Project Does
 
-This project provides a complete test suite for validating AI agents against the **OWASP LLM Top 10** security and safety controls. It covers all 10 categories (LLM01–LLM10) with:
+This project provides a complete test suite for validating AI agents against the **OWASP LLM Top 10** and **OWASP Agentic AI Top 10** security and safety controls. It covers 20 categories (LLM01–LLM10, ASI01–ASI10) with:
 
-- **30 discrete test scenarios** — single-turn evaluations and multi-turn simulations
+- **60 discrete test scenarios** — single-turn evaluations and multi-turn simulations
 - **Adversarial driver personas** — synthetic attackers that probe for vulnerabilities
 - **Model-based and code-based checks** — detect injection, leakage, excessive agency, and more
 - **Reproducible, auditable execution** — Jupyter notebooks that upload artifacts and run evaluations
@@ -100,7 +103,7 @@ This project provides a complete test suite for validating AI agents against the
 |-----------|-------------|
 | **File-first** | All scenarios (`.jsonl`), checks (`.md` / `.py`), and drivers (`.md`) live in the repo. Okareo is a deployment target; the repo is the source of truth. |
 | **Notebook-driven** | Every OWASP category has a `run-evaluation.ipynb` that uploads artifacts and runs tests. Re-running is idempotent. |
-| **Simulation for agent risks** | Multi-turn simulation (via Okareo Drivers) is used for LLM01, LLM06, LLM07, LLM10. Single-turn checks suffice for stateless risks (LLM02, LLM05, LLM09). |
+| **Simulation for agent risks** | Multi-turn simulation (via Okareo Drivers) is used for LLM01, LLM06, LLM07, LLM10 and most ASI categories (ASI01–ASI03, ASI06, ASI09, ASI10). Single-turn checks suffice for stateless risks (LLM02, LLM05, LLM09). |
 | **Explainable** | Every artifact includes OWASP category ID, risk severity, and plain-language descriptions. Results are traceable for compliance reporting. |
 
 ### OWASP Categories Covered
@@ -117,6 +120,21 @@ This project provides a complete test suite for validating AI agents against the
 | LLM08 | Vector and Embedding Weaknesses | High |
 | LLM09 | Misinformation | Medium |
 | LLM10 | Unbounded Consumption | Medium |
+
+### OWASP Agentic AI Categories Covered
+
+| ID | Category | Severity |
+|----|----------|----------|
+| ASI01 | Agent Goal Hijack | Critical |
+| ASI02 | Tool Misuse and Exploitation | Critical |
+| ASI03 | Identity and Privilege Abuse | Critical |
+| ASI04 | Agentic Supply Chain Vulnerabilities | High |
+| ASI05 | Unexpected Code Execution (RCE) | Critical |
+| ASI06 | Memory & Context Poisoning | Critical |
+| ASI07 | Insecure Inter-Agent Communication | High |
+| ASI08 | Cascading Failures | High |
+| ASI09 | Human-Agent Trust Exploitation | High |
+| ASI10 | Rogue Agents | Critical |
 
 ---
 
@@ -212,7 +230,16 @@ owasp/
 │       └── run-evaluation.ipynb
 ├── LLM02-sensitive-info-disclosure/
 │   └── ...
-└── ... (LLM03–LLM10)
+├── ... (LLM03–LLM10)
+├── ASI01-agent-goal-hijack/
+│   ├── scenarios/
+│   ├── checks/
+│   ├── drivers/
+│   └── notebooks/
+│       └── run-evaluation.ipynb
+├── ASI02-tool-misuse-exploitation/
+│   └── ...
+└── ... (ASI03–ASI10)
 ```
 
 ---
@@ -236,9 +263,9 @@ All category notebooks read from `owasp/target.json`, so one config drives the f
 
 | What to Change | Where | Notes |
 |----------------|--------|-------|
-| **Scenarios** | `owasp/LLMxx-*/scenarios/*.jsonl` | Add or edit seed inputs for your domain (e.g. network, finance, healthcare). |
-| **Checks** | `owasp/LLMxx-*/checks/*.md` or `*.py` | Add model-based or code-based checks for your policies. |
-| **Drivers** | `owasp/LLMxx-*/drivers/*.md` | Add adversarial personas that match your threat model. |
+| **Scenarios** | `owasp/LLMxx-*/scenarios/*.jsonl` or `owasp/ASIxx-*/scenarios/*.jsonl` | Add or edit seed inputs for your domain (e.g. network, finance, healthcare). |
+| **Checks** | `owasp/LLMxx-*/checks/*.md` or `owasp/ASIxx-*/checks/*.md` (or `*.py`) | Add model-based or code-based checks for your policies. |
+| **Drivers** | `owasp/LLMxx-*/drivers/*.md` or `owasp/ASIxx-*/drivers/*.md` | Add adversarial personas that match your threat model. |
 | **Target config** | `owasp/target.json` | Use different config files (e.g. `target.prod.json`) for multiple environments. |
 
 ### Example: Network Infrastructure Agent
