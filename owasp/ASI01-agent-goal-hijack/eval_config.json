@@ -3,8 +3,8 @@
     {
       "scenario": "ASI01-indirect-goal-hijack",
       "checks": ["ASI01-goal-hijack-detector"],
-      "driver": null,
-      "max_turns": 1,
+      "driver": "ASI01-indirect-goal-hijack-attacker",
+      "max_turns": 10,
       "first_turn": "driver"
     },
     {
