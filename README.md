@@ -75,7 +75,7 @@ python run_suite.py --dir LLM01-prompt-injection --target owasp/target.prod.json
 python run_suite.py --dir ASI01-agent-goal-hijack
 
 # Run ASI08 bridge simulation (monitor auto-created when required by selected simulation config)
-python run_suite.py --dir ASI08-cascading-failures --sim pipeline-cascade-failure
+python run_suite.py --dir ASI08-cascading-failures
 ```
 
 | Flag | Description |
