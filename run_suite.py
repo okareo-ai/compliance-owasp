@@ -7,6 +7,7 @@ Usage:
     python run_suite.py --dir LLM06-excessive-agency --max-turns 8
     python run_suite.py --dir LLM01-prompt-injection --upload-only
     python run_suite.py --dir LLM01-prompt-injection --eval-only
+    python run_suite.py --dir ASI08-cascading-failures --sim pipeline-cascade-failure
 
 Requires:
     - OKAREO_API_KEY set in environment or .env
@@ -28,6 +29,14 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from okareo.checks import CheckOutputType, ModelBasedCheck
 from okareo.model_under_test import Driver
+from okareo_api_client.api.default import create_filter_v0_filters_post
+from okareo_api_client.api.default import get_filters_v0_filters_get
+from okareo_api_client.api.default import update_filter_v0_filters_filter_group_id_put
+from okareo_api_client.models.comparison_operator import ComparisonOperator
+from okareo_api_client.models.datapoint_field import DatapointField
+from okareo_api_client.models.datapoint_filter_create import DatapointFilterCreate
+from okareo_api_client.models.datapoint_filter_update import DatapointFilterUpdate
+from okareo_api_client.models.filter_condition import FilterCondition
 
 from owasp.common import (
     SINGLE_TURN_DRIVER_TEMPLATE,
@@ -196,11 +205,91 @@ def upload_artifacts(okareo, category_dir: Path, category_prefix: str):
 
 
 def _load_eval_config(category_dir: Path) -> dict | None:
-    """Load optional eval_config.json for explicit simulation plan."""
+    """Load optional eval_config.json for simulation plan and options."""
     config_path = category_dir / "eval_config.json"
     if config_path.exists():
         return json.loads(config_path.read_text(encoding="utf-8"))
     return None
+
+
+def _config_bool(value: object) -> bool:
+    """Parse permissive bool-like config values."""
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def _resolve_evaluation_plan(
+    category_dir: Path,
+    scenario_modes: dict[str, str],
+    scenario_checks: dict[str, list[str] | None],
+    check_modes: dict[str, str],
+    registered_drivers: dict,
+    sim_filter: str | None = None,
+) -> tuple[list[dict], str]:
+    """Resolve the simulation plan from eval_config.json or auto-detection."""
+    eval_config = _load_eval_config(category_dir)
+    if eval_config:
+        plan = eval_config.get("simulations", [])
+        source = "eval_config.json"
+    else:
+        plan = _build_auto_plan(
+            scenario_modes,
+            scenario_checks,
+            check_modes,
+            registered_drivers,
+        )
+        source = "auto-detected plan"
+
+    if sim_filter:
+        plan = [s for s in plan if sim_filter.lower() in s["scenario"].lower()]
+
+    return plan, source
+
+
+def _resolve_monitor_config_from_plan(
+    plan: list[dict],
+    registered_checks: dict[str, str],
+) -> tuple[bool, list[str]]:
+    """Return monitor requirement + monitor checks from selected simulations.
+
+    Supported per simulation entry in ``eval_config.json``:
+      - ``requires_monitor`` (bool-like)
+      - ``monitor_checks`` (optional list[str]; falls back to ``checks``)
+    """
+    monitor_sims = [
+        sim for sim in plan if _config_bool(sim.get("requires_monitor", False))
+    ]
+    if not monitor_sims:
+        return False, []
+
+    monitor_checks: list[str] = []
+    seen: set[str] = set()
+
+    for sim in monitor_sims:
+        raw_checks = sim.get("monitor_checks")
+        if raw_checks is None:
+            raw_checks = sim.get("checks", [])
+        if isinstance(raw_checks, str):
+            raw_checks = [raw_checks]
+
+        for check_name in raw_checks or []:
+            if check_name not in registered_checks:
+                print(
+                    f"  ⚠ Monitor check '{check_name}' not found among uploaded checks; ignoring."
+                )
+                continue
+            if check_name not in seen:
+                seen.add(check_name)
+                monitor_checks.append(check_name)
+
+    if not monitor_checks:
+        print(
+            "  ⚠ Monitor required but no valid monitor checks configured. "
+            "Monitor will be created without check restrictions."
+        )
+
+    return True, monitor_checks
 
 
 def _build_auto_plan(
@@ -325,20 +414,25 @@ def run_evaluation(
     category_dir: Path,
     max_turns_override: int | None = None,
     sim_filter: str | None = None,
+    plan: list[dict] | None = None,
+    plan_source: str | None = None,
 ):
     """Run all simulations in the evaluation plan."""
-    # Load explicit config or auto-derive
-    eval_config = _load_eval_config(category_dir)
-    if eval_config:
-        plan = eval_config.get("simulations", [])
-        print(f"\n  Using eval_config.json ({len(plan)} simulations)")
+    if plan is None:
+        plan, source = _resolve_evaluation_plan(
+            category_dir=category_dir,
+            scenario_modes=scenario_modes,
+            scenario_checks=scenario_checks,
+            check_modes=check_modes,
+            registered_drivers=registered_drivers,
+            sim_filter=sim_filter,
+        )
+        print(f"\n  Using {source} ({len(plan)} simulations)")
+        if sim_filter:
+            print(f"  Filtered to {len(plan)} simulation(s) matching '{sim_filter}'")
     else:
-        plan = _build_auto_plan(scenario_modes, scenario_checks, check_modes, registered_drivers)
-        print(f"\n  Auto-detected plan: {len(plan)} simulations")
-
-    if sim_filter:
-        plan = [s for s in plan if sim_filter.lower() in s["scenario"].lower()]
-        print(f"  Filtered to {len(plan)} simulation(s) matching '{sim_filter}'")
+        source = plan_source or "provided plan"
+        print(f"\n  Using {source} ({len(plan)} simulations)")
 
     target_name = target.name
     results = {}
@@ -393,7 +487,11 @@ def run_evaluation(
                 checks=checks,
             )
             elapsed = time.monotonic() - t0
-            results[scenario_name] = (test_run, elapsed)
+            results[scenario_name] = {
+                "test_run": test_run,
+                "elapsed": elapsed,
+                "checks": list(checks),
+            }
             print(f"  ✓ Complete: {test_run.id} ({elapsed:.1f}s)")
             if hasattr(test_run, "app_link") and test_run.app_link:
                 print(f"  View: {test_run.app_link}")
@@ -402,6 +500,108 @@ def run_evaluation(
             results[scenario_name] = None
 
     return results
+
+
+def ensure_category_monitor(
+    okareo,
+    api_key: str,
+    category_prefix: str,
+    checks: list[str],
+) -> str | None:
+    """Ensure a single, reusable category monitor exists (idempotent)."""
+    monitor_name = f"{category_prefix}-monitor"
+    description = (
+        "Auto-created by run_suite.py. Captures online datapoints linked to "
+        "simulations via context_token."
+    )
+
+    print(f"\nPart 2 — Ensuring Monitor")
+    print("-" * 40)
+
+    target_checks = sorted(set(checks or []))
+
+    filters = get_filters_v0_filters_get.sync(
+        client=okareo.client,
+        api_key=api_key,
+    )
+    if isinstance(filters, list):
+        for existing in filters:
+            if getattr(existing, "name", None) == monitor_name:
+                existing_id = getattr(existing, "filter_group_id", None)
+                existing_checks_raw = getattr(existing, "checks", None)
+                existing_checks = (
+                    sorted(existing_checks_raw)
+                    if isinstance(existing_checks_raw, list)
+                    else []
+                )
+
+                if existing_checks != target_checks:
+                    print(
+                        f"  ↻ Updating monitor checks for {monitor_name}: "
+                        f"{existing_checks} -> {target_checks}"
+                    )
+                    try:
+                        update_response = (
+                            update_filter_v0_filters_filter_group_id_put.sync(
+                                filter_group_id=existing_id,
+                                client=okareo.client,
+                                body=DatapointFilterUpdate(
+                                    name=monitor_name,
+                                    description=description,
+                                    filters=getattr(existing, "filters", None),
+                                    checks=target_checks,
+                                ),
+                                api_key=api_key,
+                            )
+                        )
+                        okareo.validate_response(update_response)
+                    except Exception as e:
+                        print(
+                            f"  ✗ Failed to update monitor {monitor_name} checks: {e}"
+                        )
+                        return str(existing_id) if existing_id else None
+
+                print(
+                    f"  ✓ Reusing existing monitor: {monitor_name} "
+                    f"(filter_group_id={existing_id})"
+                )
+                return str(existing_id) if existing_id else None
+
+    payload = DatapointFilterCreate(
+        name=monitor_name,
+        description=description,
+        checks=target_checks,
+        filters=[
+            FilterCondition(
+                field=DatapointField.CONTEXT_TOKEN,
+                operator=ComparisonOperator.IS_SET,
+                value="1",
+            ),
+            FilterCondition(
+                field=DatapointField.SOURCE,
+                operator=ComparisonOperator.NOT_EQUAL,
+                value="Okareo",
+            ),
+        ],
+    )
+
+    try:
+        response = create_filter_v0_filters_post.sync(
+            client=okareo.client,
+            body=payload,
+            api_key=api_key,
+        )
+        okareo.validate_response(response)
+
+        filter_group_id = getattr(response, "filter_group_id", None)
+        print(
+            f"  ✓ Created monitor: {monitor_name} "
+            f"(filter_group_id={filter_group_id})"
+        )
+        return str(filter_group_id) if filter_group_id else None
+    except Exception as e:
+        print(f"  ✗ Failed to ensure monitor {monitor_name}: {e}")
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +621,8 @@ def print_summary(category_prefix: str, results: dict):
         if result is None:
             print(f"{name:<50} {'ERROR':<10} {'N/A':<10} N/A")
         else:
-            test_run, elapsed = result
+            test_run = result["test_run"]
+            elapsed = result["elapsed"]
             link = getattr(test_run, "app_link", None) or test_run.id
             runtime = f"{elapsed:.1f}s"
             print(f"{name:<50} {'COMPLETE':<10} {runtime:<10} {link}")
@@ -521,12 +722,45 @@ def main():
             registered_drivers,
         ) = upload_artifacts(okareo, category_dir, category_prefix)
 
+    plan, plan_source = _resolve_evaluation_plan(
+        category_dir=category_dir,
+        scenario_modes=scenario_modes,
+        scenario_checks=scenario_checks,
+        check_modes=check_modes,
+        registered_drivers=registered_drivers,
+        sim_filter=args.sim,
+    )
+    create_monitor, monitor_checks = _resolve_monitor_config_from_plan(
+        plan=plan,
+        registered_checks=registered_checks,
+    )
+
+    if create_monitor:
+        print("Selected simulation config requires monitor setup; enabling it automatically.")
+        print(f"  Monitor checks: {monitor_checks if monitor_checks else '[]'}")
+
     if args.upload_only:
+        if create_monitor:
+            ensure_category_monitor(
+                okareo=okareo,
+                api_key=api_key,
+                category_prefix=category_prefix,
+                checks=monitor_checks,
+            )
         print("\n✓ Upload complete (--upload-only). Exiting.")
         return
 
+    if create_monitor:
+        ensure_category_monitor(
+            okareo=okareo,
+            api_key=api_key,
+            category_prefix=category_prefix,
+            checks=monitor_checks,
+        )
+
     # Part 2: Evaluate
-    print(f"\nPart 2 — Running Evaluation")
+    eval_part = 3 if create_monitor else 2
+    print(f"\nPart {eval_part} — Running Evaluation")
     print("-" * 40)
 
     target = build_target(category_dir, config_path=args.target, env_path=args.target_env)
@@ -546,6 +780,8 @@ def main():
         category_dir=category_dir,
         max_turns_override=args.max_turns,
         sim_filter=args.sim,
+        plan=plan,
+        plan_source=plan_source,
     )
 
     print_summary(category_prefix, results)

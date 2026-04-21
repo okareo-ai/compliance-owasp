@@ -204,6 +204,24 @@ def build_target(
             response_access_token_path=auth_section.get("response_access_token_path", ""),
         )
 
+    # Pass body as a string — Okareo performs {latest_message}/{session_id} substitution
+    # only when body is str, not dict. json.loads() would bypass substitution.
+    if isinstance(raw_body, dict):
+        next_body = json.dumps(raw_body)
+    else:
+        next_body = raw_body
+
+    session_id_path = session.get("session_id_path", "")
+    # For A2A JSON-RPC, contextId is the per-conversation session identifier.
+    # Auto-default extraction if the request body already uses {session_id} for contextId.
+    if (
+        not session_id_path
+        and isinstance(next_body, str)
+        and "{session_id}" in next_body
+        and '"contextId"' in next_body
+    ):
+        session_id_path = "response.result.contextId"
+
     session_start_url = session.get("start_url", "")
     start_session = None
     if session_start_url:
@@ -217,16 +235,9 @@ def build_target(
             url=session_start_url,
             method="POST",
             headers=headers_json,
-            response_session_id_path=session.get("session_id_path", "") or "response.session_id",
+            response_session_id_path=session_id_path or "response.session_id",
             body=start_body,
         )
-
-    # Pass body as a string — Okareo performs {latest_message}/{session_id} substitution
-    # only when body is str, not dict. json.loads() would bypass substitution.
-    if isinstance(raw_body, dict):
-        next_body = json.dumps(raw_body)
-    else:
-        next_body = raw_body
 
     # Streaming configuration (optional)
     streaming_section = config.get("streaming", {})
@@ -245,8 +256,6 @@ def build_target(
         stop = [StreamingStopCondition(**c) for c in stop_raw]
         select = [StreamingSelectCondition(**c) for c in select_raw]
         streaming_config = StreamingConfig(stop=stop, select=select)
-
-    session_id_path = session.get("session_id_path", "")
 
     next_turn = TurnConfig(
         url=endpoint_url,
