@@ -1,0 +1,31 @@
+{
+  "simulations": [
+    {
+      "scenario": "ASI08-pipeline-cascade-failure",
+      "checks": ["ASI08-cascade-failure-detector"],
+      "requires_monitor": true,
+      "monitor_checks": ["ASI08-cascade-failure-trace-bridge-detector"],
+      "driver": "ASI08-cascade-failure-inducer",
+      "max_turns": 8,
+      "first_turn": "target"
+    },
+    {
+      "scenario": "ASI08-resource-exhaustion-amplification",
+      "checks": ["ASI08-cascade-failure-detector"],
+      "requires_monitor": true,
+      "monitor_checks": ["ASI08-cascade-failure-trace-bridge-detector"],
+      "driver": "ASI08-cascade-failure-inducer",
+      "max_turns": 8,
+      "first_turn": "target"
+    },
+    {
+      "scenario": "ASI08-shared-dependency-failure",
+      "checks": ["ASI08-cascade-failure-detector"],
+      "requires_monitor": true,
+      "monitor_checks": ["ASI08-cascade-failure-trace-bridge-detector"],
+      "driver": "ASI08-cascade-failure-inducer",
+      "max_turns": 8,
+      "first_turn": "target"
+    }
+  ]
+}

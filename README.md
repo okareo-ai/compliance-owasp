@@ -73,6 +73,9 @@ python run_suite.py --dir LLM01-prompt-injection --target owasp/target.prod.json
 
 # Run an agentic AI category
 python run_suite.py --dir ASI01-agent-goal-hijack
+
+# Run ASI08 bridge simulation (monitor auto-created when required by selected simulation config)
+python run_suite.py --dir ASI08-cascading-failures --sim pipeline-cascade-failure
 ```
 
 | Flag | Description |
@@ -83,6 +86,37 @@ python run_suite.py --dir ASI01-agent-goal-hijack
 | `--upload-only` | Upload artifacts without running evaluation |
 | `--eval-only` | Run evaluation only (assumes artifacts are already uploaded) |
 | `--target` | Path to target config file (default: `owasp/target.json`) |
+
+Simulation entries in `eval_config.json` can declare monitor behavior via:
+- `"requires_monitor": true`
+- Optional `"monitor_checks": ["..."]` (defaults to that simulation's `checks`)
+
+When a selected simulation requires monitor setup, `run_suite.py` automatically ensures the monitor before evaluation.
+For ASI08 trace-bridge, monitor checks are scoped to `ASI08-cascade-failure-trace-bridge-detector`.
+
+#### ASI08 Trace-Bridge Quick Start
+
+The ASI08 category includes a trace-simulation bridge that links live OTEL traces to simulation runs via `context_token`/`session.id`. Use the dedicated target example and bridge notebook for this flow:
+
+```bash
+# 1) Configure environment and trace-bridge target
+cp owasp/config.env.example .env
+cp owasp/target.json.trace-bridge-example owasp/target.json
+# Edit .env (OKAREO_API_KEY) and owasp/target.json (your agent endpoint)
+uv sync
+
+# 2) Upload only the ASI08 trace-bridge artifacts
+uv run python run_suite.py --dir ASI08-cascading-failures --sim pipeline-cascade-failure --upload-only
+
+# 3) Run only the bridge simulation (shared ASI08 monitor is auto-created)
+uv run python run_suite.py --dir ASI08-cascading-failures --sim pipeline-cascade-failure --max-turns 8
+
+# 4) Continue with the trace-bridge notebook for OTEL trace ingestion
+#    and online datapoint evaluation:
+#    owasp/ASI08-cascading-failures/notebooks/run-trace-bridge-evaluation.ipynb
+```
+
+The CLI path automatically performs monitor setup for selected simulations that require it (via per-simulation `"requires_monitor": true` in `eval_config.json`). This creates (or reuses) a single category monitor instead of creating one monitor per session/context token, and updates monitor checks when needed. The remaining trace-simulation bridge steps (OTEL trace ingestion and online datapoint evaluation) still run in the dedicated notebook. See `.copilot/design/asi08-integration-notes.md` for ADK `session.id` wiring guidance.
 
 ---
 

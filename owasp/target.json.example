@@ -1,5 +1,6 @@
 {
     "_comment": "OWASP Compliance Suite — Shared Target Agent Configuration. Copy to owasp/target.json and fill in your values.",
+    "_comment_a2a": "For A2A JSON-RPC targets, add \"contextId\": \"{session_id}\" under request_body.params.message and set session.session_id_path to \"response.result.contextId\".",
 
     "name": "my-agent",
 

@@ -13,6 +13,7 @@
         "method": "message/stream",
         "params": {
             "message": {
+                "contextId": "{session_id}",
                 "messageId": "okareo-msg",
                 "role": "user",
                 "parts": [{"kind": "text", "text": "{latest_message}"}]
@@ -44,7 +45,7 @@
 
     "session": {
         "start_url": "",
-        "session_id_path": "",
+        "session_id_path": "response.result.contextId",
         "end_url": "",
         "end_body": {}
     }
