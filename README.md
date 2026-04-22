@@ -19,7 +19,7 @@ This project provides a complete test suite for validating AI agents against the
 |-----------|-------------|
 | **File-first** | All scenarios (`.jsonl`), checks (`.md` / `.py`), and drivers (`.md`) live in the repo. Okareo is a deployment target; the repo is the source of truth. |
 | **CLI-driven** | A central `run_suite.py` script uploads artifacts and runs full evaluations for any OWASP category. Re-running is idempotent. |
-| **Simulation for agent risks** | Multi-turn simulation (via Okareo Drivers) is used for LLM01, LLM06, LLM07, LLM10 and most ASI categories (ASI01–ASI03, ASI06, ASI09, ASI10). Single-turn checks suffice for stateless risks (LLM02, LLM05, LLM09). |
+| **Simulation for agent risks** | Multi-turn simulation (via Okareo Drivers) is used for LLM01, LLM06–LLM08, LLM10 and most ASI categories (ASI01–ASI03, ASI05, ASI06, ASI08–ASI10). Single-turn checks suffice for stateless risks (LLM02–LLM05, LLM09, ASI04, ASI07). |
 | **Explainable** | Every artifact includes OWASP category ID, risk severity, and plain-language descriptions. Results are traceable for compliance reporting. |
 
 ### OWASP Categories Covered
