@@ -2,6 +2,56 @@
 
 A standalone, forkable repository for running **OWASP LLM Top 10 (2025)** and **OWASP Agentic AI Top 10 (2026)** compliance testing against your AI agents using [Okareo](https://okareo.com). All scenarios, checks, drivers, and execution notebooks are included as files—no database or external state beyond an Okareo API key.
 
+## Purpose and Approach
+
+### What This Project Does
+
+This project provides a complete test suite for validating AI agents against the **OWASP LLM Top 10** and **OWASP Agentic AI Top 10** security and safety controls. It covers 20 categories (LLM01–LLM10, ASI01–ASI10) with:
+
+- **55 discrete test scenarios** — single-turn evaluations and multi-turn simulations
+- **Adversarial driver personas** — synthetic attackers that probe for vulnerabilities
+- **Model-based and code-based checks** — detect injection, leakage, excessive agency, and more
+- **Reproducible, auditable execution** — Jupyter notebooks that upload artifacts and run evaluations
+
+### Approach
+
+| Principle | Description |
+|-----------|-------------|
+| **File-first** | All scenarios (`.jsonl`), checks (`.md` / `.py`), and drivers (`.md`) live in the repo. Okareo is a deployment target; the repo is the source of truth. |
+| **CLI-driven** | A central `run_suite.py` script uploads artifacts and runs full evaluations for any OWASP category. Re-running is idempotent. |
+| **Simulation for agent risks** | Multi-turn simulation (via Okareo Drivers) is used for LLM01, LLM06, LLM07, LLM10 and most ASI categories (ASI01–ASI03, ASI06, ASI09, ASI10). Single-turn checks suffice for stateless risks (LLM02, LLM05, LLM09). |
+| **Explainable** | Every artifact includes OWASP category ID, risk severity, and plain-language descriptions. Results are traceable for compliance reporting. |
+
+### OWASP Categories Covered
+
+| ID | Category | Severity |
+|----|----------|----------|
+| LLM01 | Prompt Injection | Critical |
+| LLM02 | Sensitive Information Disclosure | Critical |
+| LLM03 | Supply Chain Vulnerabilities | High |
+| LLM04 | Data and Model Poisoning | High |
+| LLM05 | Improper Output Handling | High |
+| LLM06 | Excessive Agency | Critical |
+| LLM07 | System Prompt Leakage | High |
+| LLM08 | Vector and Embedding Weaknesses | High |
+| LLM09 | Misinformation | Medium |
+| LLM10 | Unbounded Consumption | Medium |
+
+### OWASP Agentic AI Categories Covered
+
+| ID | Category | Severity |
+|----|----------|----------|
+| ASI01 | Agent Goal Hijack | Critical |
+| ASI02 | Tool Misuse and Exploitation | Critical |
+| ASI03 | Identity and Privilege Abuse | Critical |
+| ASI04 | Agentic Supply Chain Vulnerabilities | High |
+| ASI05 | Unexpected Code Execution (RCE) | Critical |
+| ASI06 | Memory & Context Poisoning | Critical |
+| ASI07 | Insecure Inter-Agent Communication | High |
+| ASI08 | Cascading Failures | High |
+| ASI09 | Human-Agent Trust Exploitation | High |
+| ASI10 | Rogue Agents | Critical |
+
 ---
 
 ## Quick Start
@@ -116,138 +166,9 @@ uv run python run_suite.py --dir ASI08-cascading-failures --sim pipeline-cascade
 #    owasp/ASI08-cascading-failures/notebooks/run-trace-bridge-evaluation.ipynb
 ```
 
-The CLI path automatically performs monitor setup for selected simulations that require it (via per-simulation `"requires_monitor": true` in `eval_config.json`). This creates (or reuses) a single category monitor instead of creating one monitor per session/context token, and updates monitor checks when needed. The remaining trace-simulation bridge steps (OTEL trace ingestion and online datapoint evaluation) still run in the dedicated notebook. See `.copilot/design/asi08-integration-notes.md` for ADK `session.id` wiring guidance.
+The CLI path automatically performs monitor setup for selected simulations that require it (via per-simulation `"requires_monitor": true` in `eval_config.json`). This creates (or reuses) a single category monitor instead of creating one monitor per session/context token, and updates monitor checks when needed. The remaining trace-simulation bridge steps (OTEL trace ingestion and online datapoint evaluation) still run in the dedicated notebook.
 
 ---
-
-## 1. Purpose and Approach
-
-### What This Project Does
-
-This project provides a complete test suite for validating AI agents against the **OWASP LLM Top 10** and **OWASP Agentic AI Top 10** security and safety controls. It covers 20 categories (LLM01–LLM10, ASI01–ASI10) with:
-
-- **60 discrete test scenarios** — single-turn evaluations and multi-turn simulations
-- **Adversarial driver personas** — synthetic attackers that probe for vulnerabilities
-- **Model-based and code-based checks** — detect injection, leakage, excessive agency, and more
-- **Reproducible, auditable execution** — Jupyter notebooks that upload artifacts and run evaluations
-
-### Approach
-
-| Principle | Description |
-|-----------|-------------|
-| **File-first** | All scenarios (`.jsonl`), checks (`.md` / `.py`), and drivers (`.md`) live in the repo. Okareo is a deployment target; the repo is the source of truth. |
-| **Notebook-driven** | Every OWASP category has a `run-evaluation.ipynb` that uploads artifacts and runs tests. Re-running is idempotent. |
-| **Simulation for agent risks** | Multi-turn simulation (via Okareo Drivers) is used for LLM01, LLM06, LLM07, LLM10 and most ASI categories (ASI01–ASI03, ASI06, ASI09, ASI10). Single-turn checks suffice for stateless risks (LLM02, LLM05, LLM09). |
-| **Explainable** | Every artifact includes OWASP category ID, risk severity, and plain-language descriptions. Results are traceable for compliance reporting. |
-
-### OWASP Categories Covered
-
-| ID | Category | Severity |
-|----|----------|----------|
-| LLM01 | Prompt Injection | Critical |
-| LLM02 | Sensitive Information Disclosure | Critical |
-| LLM03 | Supply Chain Vulnerabilities | High |
-| LLM04 | Data and Model Poisoning | High |
-| LLM05 | Improper Output Handling | High |
-| LLM06 | Excessive Agency | Critical |
-| LLM07 | System Prompt Leakage | High |
-| LLM08 | Vector and Embedding Weaknesses | High |
-| LLM09 | Misinformation | Medium |
-| LLM10 | Unbounded Consumption | Medium |
-
-### OWASP Agentic AI Categories Covered
-
-| ID | Category | Severity |
-|----|----------|----------|
-| ASI01 | Agent Goal Hijack | Critical |
-| ASI02 | Tool Misuse and Exploitation | Critical |
-| ASI03 | Identity and Privilege Abuse | Critical |
-| ASI04 | Agentic Supply Chain Vulnerabilities | High |
-| ASI05 | Unexpected Code Execution (RCE) | Critical |
-| ASI06 | Memory & Context Poisoning | Critical |
-| ASI07 | Insecure Inter-Agent Communication | High |
-| ASI08 | Cascading Failures | High |
-| ASI09 | Human-Agent Trust Exploitation | High |
-| ASI10 | Rogue Agents | Critical |
-
----
-
-## 2. Setup: Notebooks and Okareo
-
-### Prerequisites
-
-- **Python 3.11+**
-- **[uv](https://docs.astral.sh/uv/)** (recommended) or pip
-- **Okareo account** — [Sign up](https://app.okareo.com) and obtain an API key
-- **Jupyter** — for running notebooks (included as a dev dependency, or use VS Code / Cursor)
-
-### Step 1: Clone the Repository
-
-```bash
-git clone https://github.com/okareo-ai/compliance-owasp.git
-cd compliance-owasp
-```
-
-### Step 2: Install Dependencies
-
-```bash
-# Using uv (recommended) — creates a virtualenv and installs all dependencies
-uv sync
-
-# Or using pip in your own virtualenv
-python -m venv .venv && source .venv/bin/activate
-pip install .
-```
-
-### Step 3: Configure Okareo API Key
-
-```bash
-cp owasp/config.env.example .env
-```
-
-Edit `.env` and set your Okareo API key:
-
-```
-OKAREO_API_KEY=your_okareo_api_key_here
-
-# Optional: override the Okareo API base URL (defaults to https://api.okareo.com)
-# OKAREO_BASE_URL=https://api.okareo.com
-```
-
-### Step 4: Configure Your Target Agent
-
-Two example configs are provided — choose the one that matches your target:
-
-```bash
-# Standard (non-streaming) target
-cp owasp/target.json.example owasp/target.json
-
-# SSE streaming target (e.g. OpenAI-compatible or custom streaming endpoint)
-cp owasp/target.json.streaming-example owasp/target.json
-```
-
-Edit `owasp/target.json` with your agent's endpoint and request format:
-
-- `name` — human-readable name for the agent
-- `endpoint_url` — HTTP endpoint that accepts user messages and returns responses
-- `request_body` — JSON object template (use `{latest_message}` for the user message)
-- `response_path` — JSONPath to the assistant's response text (e.g. `response` or `choices[0].message.content`)
-
-See `owasp/target.json.example` for full options (auth, session management). The streaming example additionally includes `streaming.stop` and `streaming.select` conditions for SSE event parsing.
-
-### Step 5: Run a Notebook
-
-Open any category notebook, for example:
-
-```
-owasp/LLM01-prompt-injection/notebooks/run-evaluation.ipynb
-```
-
-Run all cells. The notebook will:
-
-1. Upload scenarios, checks, and drivers from the local folder
-2. Run the evaluation against your target agent
-3. Display results
 
 ### Project Layout
 
@@ -278,7 +199,7 @@ owasp/
 
 ---
 
-## 3. Fork and Modify for Your Agent
+## Fork and Modify for Your Agent
 
 ### Fork the Repo
 
@@ -320,7 +241,7 @@ All artifacts should include metadata: `owasp_category`, `risk_severity`, `artif
 
 ---
 
-## 4. Specify / Spec-Kit
+## Specify / Spec-Kit
 
 This project uses [Spec-Kit](https://github.com/github/spec-kit) for spec-driven development. Spec-Kit provides a **Specify → Plan → Tasks → Implement** workflow with Cursor integration.
 
