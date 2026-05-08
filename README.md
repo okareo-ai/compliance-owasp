@@ -225,7 +225,7 @@ All category notebooks read from `owasp/target.json`, so one config drives the f
 
 ### Example: Network Infrastructure Agent
 
-See `agent-use-cases/network-infrastructure-agent-analysis.md` for a worked example mapping a multi-agent network assurance system (Ciena Navigator RSD) to this suite. It shows how to:
+See `agent-use-cases/network-infrastructure-agent-analysis.md` for a worked example mapping a multi-agent network assurance system to this suite. It shows how to:
 
 - Map domain threats (e.g. BGP injection, NETCONF misuse) to OWASP categories
 - Add domain-specific scenarios and checks
